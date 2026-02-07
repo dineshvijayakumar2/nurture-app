@@ -5,13 +5,15 @@ import { generateValueDialogue } from '../services/geminiService';
 import { ICONS } from '../constants';
 
 export const ValueGarden: React.FC = () => {
-    const { child, logs, knowledge, addKnowledge, deleteKnowledge } = useFamily();
+    const { child, logs, knowledge, addKnowledge, updateKnowledge, deleteKnowledge } = useFamily();
     const [selectedValue, setSelectedValue] = useState<Value | null>(null);
     const [valueDialogue, setValueDialogue] = useState<ValueDialogue | null>(null);
     const [isValueLoading, setIsValueLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<'values' | 'wisdom'>('wisdom');
     const [selectedResource, setSelectedResource] = useState<KnowledgeSource | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState('');
 
     // Form State for New Resource
     const [newTitle, setNewTitle] = useState('');
@@ -128,10 +130,29 @@ export const ValueGarden: React.FC = () => {
             {selectedResource && (
                 <div className="fixed inset-0 z-[200] bg-[#fdfbf7] animate-in fade-in duration-300 flex flex-col">
                     <div className="px-6 py-6 border-b border-stone-200 flex justify-between items-center bg-[#fdfbf7] shrink-0 sticky top-0 z-10">
-                        <button onClick={() => setSelectedResource(null)} className="w-10 h-10 rounded-full hover:bg-stone-100 flex items-center justify-center transition-colors">
+                        <button onClick={() => {
+                            setSelectedResource(null);
+                            setIsEditing(false);
+                        }} className="w-10 h-10 rounded-full hover:bg-stone-100 flex items-center justify-center transition-colors">
                             <ICONS.Close className="w-6 h-6 text-stone-600" />
                         </button>
                         <div className="flex gap-4 text-stone-400">
+                            {isEditing ? (
+                                <button onClick={async () => {
+                                    await updateKnowledge({ ...selectedResource, content: editContent });
+                                    setSelectedResource({ ...selectedResource, content: editContent });
+                                    setIsEditing(false);
+                                }} className="px-4 py-2 rounded-full bg-[#A8C5A8] text-white font-bold text-sm hover:shadow-lg transition-all">
+                                    Save
+                                </button>
+                            ) : (
+                                <button onClick={() => {
+                                    setEditContent(selectedResource.content || '');
+                                    setIsEditing(true);
+                                }} className="w-10 h-10 rounded-full hover:bg-stone-100 flex items-center justify-center">
+                                    <ICONS.Edit className="w-4 h-4" />
+                                </button>
+                            )}
                             <button onClick={async () => {
                                 if (window.confirm("Delete this resource?")) {
                                     await deleteKnowledge(selectedResource.id);
@@ -140,7 +161,6 @@ export const ValueGarden: React.FC = () => {
                             }} className="w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center text-red-300 hover:text-red-500 transition-all">
                                 <ICONS.Plus className="w-4 h-4 rotate-45" />
                             </button>
-                            <button className="hover:text-stone-900 font-serif font-bold text-xl">Aa</button>
                         </div>
                     </div>
 
@@ -152,13 +172,33 @@ export const ValueGarden: React.FC = () => {
                                 {selectedResource.author && <p className="text-stone-500 font-serif italic text-xl">by {selectedResource.author}</p>}
                             </div>
 
-                            <article className="prose prose-xl prose-stone mx-auto font-serif leading-loose text-stone-800">
-                                {selectedResource.content ? (
-                                    selectedResource.content.split('\n').map((p, i) => <p key={i} className="mb-6 indent-8 text-xl md:text-2xl opacity-90">{p}</p>)
-                                ) : (
-                                    <p className="italic text-stone-400 text-center">No content available for reading.</p>
-                                )}
-                            </article>
+                            {isEditing ? (
+                                <textarea
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    className="w-full min-h-[500px] px-8 py-6 rounded-3xl bg-stone-50 border-2 border-stone-200 focus:border-[#A8C5A8] outline-none font-serif text-xl leading-loose text-stone-800 resize-vertical"
+                                    placeholder="Enter your notes, key concepts, or insights here..."
+                                />
+                            ) : (
+                                <article className="prose prose-xl prose-stone mx-auto font-serif leading-loose text-stone-800">
+                                    {selectedResource.content ? (
+                                        selectedResource.content.split('\n\n').map((p, i) => {
+                                            // Support basic markdown-style formatting
+                                            const formatted = p
+                                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                                                .replace(/^# (.+)$/gm, '<h3 class="text-2xl font-bold mt-8 mb-4">$1</h3>');
+
+                                            return (
+                                                <div key={i} className="mb-6" dangerouslySetInnerHTML={{ __html: formatted }} />
+                                            );
+                                        })
+                                    ) : (
+                                        <p className="italic text-stone-400 text-center">No content available. Click the edit button to add notes.</p>
+                                    )}
+                                </article>
+                            )}
                         </div>
                     </div>
                 </div>

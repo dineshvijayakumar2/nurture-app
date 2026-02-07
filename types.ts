@@ -41,7 +41,9 @@ export interface ScheduledClass {
   startTime: string;
   durationHours: number;
   isRecurring: boolean;
-  dayOfWeek?: number; // 0-6
+  dayOfWeek?: number; // 0-6 (deprecated - use daysOfWeek for multi-day support)
+  daysOfWeek?: number[]; // 0-6, supports multiple days (Mon-Sun)
+  dayTimeMap?: Record<string, string>; // Per-day start times: { "1": "09:00", "3": "10:00" } for different times
   specificDates?: string[]; // ISO date strings
   cost?: number; // Cost per session
 
@@ -49,6 +51,14 @@ export interface ScheduledClass {
   startDate: string; // ISO Date String (YYYY-MM-DD)
   endDate?: string; // ISO Date String (YYYY-MM-DD) or null for ongoing
   status: 'active' | 'paused' | 'discontinued';
+}
+
+export interface ParentProfile {
+  id: string; // userId
+  name: string;
+  email: string;
+  photoUrl?: string;
+  role: 'primary' | 'partner' | 'family';
 }
 
 export interface ChildProfile {
@@ -118,7 +128,18 @@ export interface NeuralReading {
   milestoneWindow: string;
   citations: string[];
   activityTrends?: string;
-  nutritionAdvice?: string; // New: AI recommendations based on activity
+  nutritionAdvice?: string;
+  milestones?: { // New: AI-detected milestones
+    detected: string[];
+    upcoming: string[];
+    ageAppropriate: boolean;
+  };
+  activityRecommendations?: { // New: AI-suggested activities
+    name: string;
+    category: ActivityCategory;
+    reason: string;
+    developmentalBenefit: string;
+  }[];
 }
 
 export interface ChatMessage {

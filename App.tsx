@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { FamilyProvider, useFamily } from './context/FamilyContext';
 import { Layout } from './components/Layout';
@@ -12,14 +11,17 @@ import { Coach } from './pages/Coach';
 import { ValueGarden } from './pages/ValueGarden';
 import { saveChild } from './services/storageService';
 
-const AppContent: React.FC = () => {
-  const { user, child, familyId, isDemoMode, loginDemo, authLoading, setChild, joinFamily, runMigration, wipeData } = useFamily();
-  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
+const AppContent = () => {
+  const { user, child, parents, familyId, isDemoMode, loginDemo, authLoading, setChild, saveParentProfileData, removeParentFromFamily, leaveFamily, joinFamily, runMigration, wipeData } = useFamily();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   // Derived active tab from URL, fallback to 'growth'
   const activeTab = location.pathname.substring(1) || 'growth';
+
+  // Get current logged-in parent profile
+  const currentParent = parents.find(p => p.id === user?.uid);
 
   // We need a way to determine 'activeTab' for Layout based on Route.
   // However, Layout seems to use state. simpler to let Layout use Link/NavLink?
@@ -30,7 +32,7 @@ const AppContent: React.FC = () => {
   if (!user) return <Auth onDemoLogin={loginDemo} />;
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={(t) => navigate(`/${t}`)} child={child || {} as any} onProfileClick={() => setIsProfileModalOpen(true)} isProcessing={false}>
+    <Layout activeTab={activeTab} setActiveTab={(t) => navigate(`/${t}`)} child={child || {} as any} currentParent={currentParent} onProfileClick={() => setIsProfileModalOpen(true)} isProcessing={false}>
       <div className="max-w-4xl mx-auto pt-4">
         <Routes>
           <Route path="/" element={<Navigate to="/growth" replace />} />
@@ -46,17 +48,21 @@ const AppContent: React.FC = () => {
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         onSave={async (u) => { await saveChild(familyId!, u); setChild(u); }}
+        onSaveParent={saveParentProfileData}
         initialData={child || {} as any}
+        currentUser={user}
+        parents={parents}
         familyId={familyId || ''}
         onJoinFamily={joinFamily}
-        onMigrate={runMigration}
+        onRemoveParent={removeParentFromFamily}
+        onLeaveFamily={leaveFamily}
         onNeuralBurn={wipeData}
       />
     </Layout>
   );
 };
 
-const App: React.FC = () => {
+const App = () => {
   return (
     <BrowserRouter>
       <FamilyProvider>

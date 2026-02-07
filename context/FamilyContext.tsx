@@ -13,10 +13,11 @@ import {
     getScheduledClasses, saveScheduledClass, deleteScheduledClass, updateScheduledClass,
     updateActivityDate, updateScheduleDay,
     updateChildIcons, migrateLegacyLogs,
-    getChatMessages, saveChatMessage
+    getChatMessages, saveChatMessage,
+    saveParentProfile, getParentProfile, getFamilyParents, deleteParentProfile, clearUserFamilyId
 } from '../services/storageService';
 import { processLogEntry, generateNeuralReading, generateChatResponse, generateValueDialogue, generateActivityIcon } from '../services/geminiService';
-import { ChildProfile, LogEntry, NeuralReading, ChatMessage, Value, ValueDialogue, KnowledgeSource, Activity, ScheduledClass, ActivityCategory, Mood } from '../types';
+import { ChildProfile, ParentProfile, LogEntry, NeuralReading, ChatMessage, Value, ValueDialogue, KnowledgeSource, Activity, ScheduledClass, ActivityCategory, Mood } from '../types';
 import { PREDEFINED_ICONS } from '../constants';
 
 // MOCK USER for Demo Mode
@@ -30,12 +31,13 @@ interface FamilyContextType {
     user: User | null;
     familyId: string | null;
     child: ChildProfile | null;
+    parents: ParentProfile[];
     logs: LogEntry[];
     readings: NeuralReading[];
     activities: Activity[];
     scheduledClasses: ScheduledClass[];
     knowledge: KnowledgeSource[];
-    chatMessages: ChatMessage[]; // New
+    chatMessages: ChatMessage[];
     isDemoMode: boolean;
     isLoading: boolean;
     authLoading: boolean;
@@ -44,17 +46,22 @@ interface FamilyContextType {
     loginDemo: () => void;
     setChild: (child: ChildProfile) => void;
     saveChildProfile: (profile: ChildProfile) => Promise<void>;
+    saveParentProfileData: (profile: ParentProfile) => Promise<void>;
+    removeParentFromFamily: (userId: string) => Promise<void>;
+    leaveFamily: () => Promise<void>;
     joinFamily: (fid: string) => Promise<void>;
     addLog: (content: string, image?: string | null, isPrivate?: boolean) => Promise<LogEntry | undefined>;
     addActivity: (name: string, category: ActivityCategory, duration: number, cost: number, mood: Mood, date: string, photo?: string | null) => Promise<void>;
-    addSchedule: (name: string, category: ActivityCategory, duration: number, day: number, cost: number, startDate?: string, isRecurring?: boolean, specificDates?: string[]) => Promise<void>;
+    addSchedule: (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring?: boolean, specificDates?: string[], startTime?: string) => Promise<void>;
     updateSchedule: (cls: ScheduledClass) => Promise<void>;
     deleteSchedule: (id: string) => Promise<void>;
-    moveClass: (id: string, newDay: number) => Promise<void>; // New
+    moveClass: (id: string, newDay: number) => Promise<void>;
     generateReading: () => Promise<void>;
-    sendChatMessage: (text: string, image?: string | null) => Promise<void>; // New
+    sendChatMessage: (text: string, image?: string | null) => Promise<void>;
     addKnowledge: (source: Omit<KnowledgeSource, 'id'>) => Promise<void>;
+    updateKnowledge: (source: KnowledgeSource) => Promise<void>;
     deleteKnowledge: (id: string) => Promise<void>;
+    getParentName: (authorId: string) => string;
     runMigration: () => Promise<void>;
     wipeData: () => Promise<void>;
 }
@@ -74,6 +81,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [authLoading, setAuthLoading] = useState(true);
 
     const [child, setChild] = useState<ChildProfile | null>(null);
+    const [parents, setParents] = useState<ParentProfile[]>([]);
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [readings, setReadings] = useState<NeuralReading[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
@@ -126,16 +134,29 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 const fetchedChats = await getChatMessages(fid, uid);
                 setChatMessages(fetchedChats);
             } catch (e) { console.error("Failed to load chats (likely missing index)", e); }
+
+            try {
+                const fetchedParents = await getFamilyParents(fid);
+                setParents(fetchedParents);
+            } catch (e) { console.error("Failed to load parents", e); }
         } catch (error) { console.error("Error loading family data", error); }
     }, []);
 
     const initFamilyData = useCallback(async (uid: string) => {
         setIsLoading(true);
         try {
+            console.log('🔍 initFamilyData called with uid:', uid);
             const fid = await getUserFamilyId(uid);
+            console.log('📌 Got familyId from getUserFamilyId:', fid);
             setFamilyId(fid);
+            console.log('✅ Set familyId in state:', fid);
             await loadFamilyData(fid, uid);
-        } catch (error) { console.error(error); } finally { setIsLoading(false); }
+            return fid; // Return the familyId for immediate use
+        } catch (error) {
+            console.error('❌ Error in initFamilyData:', error);
+        } finally {
+            setIsLoading(false);
+        }
     }, [loadFamilyData]);
 
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -168,8 +189,40 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser && !isDemoMode) { setUser(currentUser); initFamilyData(currentUser.uid); }
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            console.log('🔐 Auth state changed:', currentUser ? `User: ${currentUser.uid}` : 'No user');
+
+            if (currentUser && !isDemoMode) {
+                setUser(currentUser);
+
+                // Get familyId synchronously from initFamilyData return value
+                const fid = await initFamilyData(currentUser.uid);
+
+                console.log('👤 Checking parent profile with familyId:', fid);
+
+                // Auto-create parent profile if not exists (use fid directly, not state)
+                if (fid) {
+                    const existingProfile = await getParentProfile(fid, currentUser.uid);
+                    console.log('Existing parent profile:', existingProfile);
+
+                    if (!existingProfile) {
+                        console.log('Creating new parent profile...');
+                        const newProfile: ParentProfile = {
+                            id: currentUser.uid,
+                            name: currentUser.displayName || 'Parent',
+                            email: currentUser.email || '',
+                            photoUrl: currentUser.photoURL || undefined,
+                            role: 'primary'
+                        };
+                        await saveParentProfile(fid, newProfile);
+                        setParents(prev => [...prev, newProfile]);
+                        console.log('✅ Parent profile created');
+                    }
+                }
+            } else {
+                console.log('⚠️ No current user or in demo mode');
+            }
+
             setAuthLoading(false);
         });
         return () => unsubscribe();
@@ -187,11 +240,54 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setChild(profile);
     };
 
+    const saveParentProfileData = async (profile: ParentProfile) => {
+        if (!familyId) return;
+        await saveParentProfile(familyId, profile);
+        setParents(prev => {
+            const exists = prev.find(p => p.id === profile.id);
+            if (exists) return prev.map(p => p.id === profile.id ? profile : p);
+            return [...prev, profile];
+        });
+    };
+
+    const getParentName = (authorId: string): string => {
+        const parent = parents.find(p => p.id === authorId);
+        return parent?.name || user?.displayName || 'Family Member';
+    };
+
     const joinFamily = async (fid: string) => {
         if (!user) return;
         await setUserFamilyId(user.uid, fid);
         setFamilyId(fid);
         await loadFamilyData(fid, user.uid);
+    };
+
+    const removeParentFromFamily = async (userId: string) => {
+        if (!familyId || !user) return;
+        // Prevent removing yourself through this function
+        if (userId === user.uid) return;
+        // Only primary parent can remove others
+        const currentParent = parents.find(p => p.id === user.uid);
+        if (currentParent?.role !== 'primary') return;
+
+        await deleteParentProfile(familyId, userId);
+        await clearUserFamilyId(userId);
+        setParents(prev => prev.filter(p => p.id !== userId));
+    };
+
+    const leaveFamily = async () => {
+        if (!familyId || !user) return;
+        await deleteParentProfile(familyId, user.uid);
+        await clearUserFamilyId(user.uid);
+        setFamilyId(null);
+        setChild(null);
+        setParents([]);
+        setLogs([]);
+        setReadings([]);
+        setActivities([]);
+        setScheduledClasses([]);
+        setKnowledge([]);
+        setChatMessages([]);
     };
 
     const addLog = async (content: string, image?: string | null, isPrivate = false) => {
@@ -235,23 +331,26 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         } catch (error) { console.error(error); } finally { setIsLoading(false); }
     };
 
-    const addSchedule = async (name: string, category: ActivityCategory, duration: number, day: number, cost: number, startDate?: string, isRecurring: boolean = true, specificDates?: string[]) => {
+    const addSchedule = async (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring: boolean = true, specificDates?: string[], startTime: string = "09:00") => {
         if (!familyId || !child) return;
         setIsLoading(true);
         try {
             const sanitizedName = cleanKey(name);
+            // Support both single day and multi-day selection
+            const daysArray = Array.isArray(day) ? day : [day];
             const newClass: ScheduledClass = {
-                id: Math.random().toString(36).substr(2, 9),
-                name, category, startTime: "17:00",
+                id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                name, category, startTime,
                 durationHours: duration, isRecurring,
-                dayOfWeek: isRecurring ? day : undefined,
+                dayOfWeek: undefined, // Deprecated - use daysOfWeek
+                daysOfWeek: isRecurring ? daysArray : undefined,
                 specificDates: isRecurring ? undefined : specificDates,
                 cost,
                 startDate: startDate || (specificDates?.[0]) || new Date().toISOString().split('T')[0],
                 status: 'active'
             };
             await saveScheduledClass(familyId, newClass);
-            setScheduledClasses(p => [...p, newClass]);
+            setScheduledClasses(prev => [...prev, newClass]);
 
             let currentIcons = child.activityIcons || {};
             if (!currentIcons[sanitizedName]) {
@@ -275,16 +374,39 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (!familyId) return;
         setIsLoading(true);
         try {
+            console.log('Updating schedule:', { familyId, classId: cls.id });
             await updateScheduledClass(familyId, cls);
-            setScheduledClasses(p => p.map(s => s.id === cls.id ? cls : s));
-        } catch (error) { console.error(error); } finally { setIsLoading(false); }
+            // Update local state
+            setScheduledClasses(prev => prev.map(s => s.id === cls.id ? cls : s));
+            console.log('✅ Schedule updated successfully:', cls.id);
+        } catch (error) {
+            console.error('❌ Failed to update schedule:', error);
+            alert(`Failed to update: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const deleteSchedule = async (id: string) => {
-        if (!familyId) return;
+        console.log('🗑️ deleteSchedule called with:', { id, familyId });
+
+        if (!familyId) {
+            console.error('❌ CRITICAL: familyId is null/undefined! Cannot delete schedule.');
+            alert('Error: Family ID not set. Please refresh the page and try again.');
+            return;
+        }
+
         if (window.confirm("Remove?")) {
-            await deleteScheduledClass(familyId, id);
-            setScheduledClasses(p => p.filter(i => i.id !== id));
+            try {
+                console.log('Deleting schedule:', { familyId, scheduleId: id });
+                await deleteScheduledClass(familyId, id);
+                // Update local state
+                setScheduledClasses(prev => prev.filter(i => i.id !== id));
+                console.log('✅ Schedule deleted successfully:', id);
+            } catch (error) {
+                console.error('❌ Failed to delete schedule:', error);
+                alert(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
         }
     };
 
@@ -308,22 +430,56 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (!familyId) return;
         setIsLoading(true);
         try {
+            // Generate a more unique ID using timestamp + random
+            const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const newSource: KnowledgeSource = {
                 ...source,
-                id: Math.random().toString(36).substr(2, 9)
+                id: uniqueId
             };
             await saveKnowledgeSource(familyId, newSource);
-            setKnowledge(p => [...p, newSource]);
+            setKnowledge(prev => [...prev, newSource]);
         } catch (error) { console.error(error); } finally { setIsLoading(false); }
     };
 
-    const deleteKnowledge = async (id: string) => {
+    const updateKnowledge = async (source: KnowledgeSource) => {
         if (!familyId) return;
         setIsLoading(true);
         try {
+            console.log('Updating knowledge:', { familyId, sourceId: source.id });
+            await saveKnowledgeSource(familyId, source);
+            // Update local state
+            setKnowledge(prev => prev.map(s => s.id === source.id ? source : s));
+            console.log('✅ Knowledge updated successfully:', source.id);
+        } catch (error) {
+            console.error('❌ Failed to update knowledge:', error);
+            alert(`Failed to update wisdom: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const deleteKnowledge = async (id: string) => {
+        console.log('🗑️ deleteKnowledge called with:', { id, familyId });
+
+        if (!familyId) {
+            console.error('❌ CRITICAL: familyId is null/undefined! Cannot delete knowledge.');
+            alert('Error: Family ID not set. Please refresh the page and try again.');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            console.log('Deleting knowledge:', { familyId, knowledgeId: id });
             await deleteKnowledgeSource(familyId, id);
-            setKnowledge(p => p.filter(s => s.id !== id));
-        } catch (error) { console.error(error); } finally { setIsLoading(false); }
+            // Update local state
+            setKnowledge(prev => prev.filter(s => s.id !== id));
+            console.log('✅ Knowledge deleted successfully:', id);
+        } catch (error) {
+            console.error('❌ Failed to delete knowledge:', error);
+            alert(`Failed to delete wisdom: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const runMigration = async () => {
@@ -344,11 +500,11 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     return (
         <FamilyContext.Provider value={{
-            user, familyId, child, logs, readings, activities, scheduledClasses, knowledge, chatMessages,
+            user, familyId, child, parents, logs, readings, activities, scheduledClasses, knowledge, chatMessages,
             isDemoMode, isLoading, authLoading,
-            loginDemo, setChild, saveChildProfile, joinFamily,
+            loginDemo, setChild, saveChildProfile, saveParentProfileData, removeParentFromFamily, leaveFamily, joinFamily,
             addLog, addActivity, addSchedule, updateSchedule, deleteSchedule, moveClass,
-            generateReading, sendChatMessage, addKnowledge, deleteKnowledge, runMigration, wipeData
+            generateReading, sendChatMessage, addKnowledge, updateKnowledge, deleteKnowledge, getParentName, runMigration, wipeData
         }}>
             {children}
         </FamilyContext.Provider>

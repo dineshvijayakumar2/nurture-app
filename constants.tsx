@@ -13,7 +13,7 @@ export const PREDEFINED_ICONS: Record<string, string> = {
   sport: '⚽',
   art: '🎨',
   academic: '📚',
-  media: '🎬',
+  media: '📺', // Screen time: Shows, Movies, Educational videos
   travel: '✈️',
   adhoc: '🌟',
   music: '🎵',
@@ -21,7 +21,11 @@ export const PREDEFINED_ICONS: Record<string, string> = {
   badminton: '🏸',
   soccer: '⚽',
   reading: '📖',
-  math: '🔢'
+  math: '🔢',
+  // Additional common activities
+  book: '📖',
+  coding: '💻',
+  drawing: '✏️'
 };
 
 export const ICONS = {

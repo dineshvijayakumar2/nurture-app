@@ -80,7 +80,7 @@ export const generateActivityIcon = async (activityName: string): Promise<string
     config: { imageConfig: { aspectRatio: "1:1" } }
   });
   for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData) return `data: image / png; base64, ${part.inlineData.data} `;
+    if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
   }
   return "";
 };
@@ -106,13 +106,15 @@ export const generateNeuralReading = async (
     model: "gemini-3-pro-preview",
     contents: `HISTORY: ${JSON.stringify(logs)} \nACTIVITY: ${activitySummary} \n${dietInfo} \n${kb} `,
     config: {
-      systemInstruction: `You are Nurture, a child development and nutrition expert. 
-      Analyze ${child.name} 's week.
-  1. Growth Architecture: Define the phase.
-      2. Neural Reading: The story.
-      3. Nutrition Advice: Provide 3 specific food recommendations tailored to their activity level(e.g., higher carb / protein for sports weeks) and dietary constraints.Avoid allergens.
-      4. Science: The 'why' behind the growth.
-  Format in JSON.`,
+      systemInstruction: `You are Nurture, a child development and nutrition expert powered by Google Gemini.
+      Analyze ${child.name}'s week (age ${child.age}).
+      1. Growth Architecture: Define the developmental phase.
+      2. Neural Reading: The developmental story.
+      3. Milestone Detection: Identify any age-appropriate milestones ACTUALLY demonstrated in the logs (detected), and predict what milestones are coming in the next 3-6 months (upcoming). Flag if development seems age-appropriate.
+      4. Activity Recommendations: Suggest 2-3 specific NEW activities that would benefit ${child.name}'s development based on observed patterns and gaps. Include category, reason for recommendation, and specific developmental benefit.
+      5. Nutrition Advice: Provide 3 specific food recommendations tailored to their activity level (e.g., higher carb/protein for sports weeks) and dietary constraints. Avoid allergens.
+      6. Science: The 'why' behind the growth.
+      Format in JSON.`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -124,7 +126,27 @@ export const generateNeuralReading = async (
           milestoneWindow: { type: Type.STRING },
           citations: { type: Type.ARRAY, items: { type: Type.STRING } },
           activityTrends: { type: Type.STRING },
-          nutritionAdvice: { type: Type.STRING }
+          nutritionAdvice: { type: Type.STRING },
+          milestones: {
+            type: Type.OBJECT,
+            properties: {
+              detected: { type: Type.ARRAY, items: { type: Type.STRING } },
+              upcoming: { type: Type.ARRAY, items: { type: Type.STRING } },
+              ageAppropriate: { type: Type.BOOLEAN }
+            }
+          },
+          activityRecommendations: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                category: { type: Type.STRING },
+                reason: { type: Type.STRING },
+                developmentalBenefit: { type: Type.STRING }
+              }
+            }
+          }
         }
       }
     }

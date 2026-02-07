@@ -15,9 +15,10 @@ import {
   where
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { LogEntry, NeuralReading, ChildProfile, KnowledgeSource, Activity, ScheduledClass, ChatMessage } from "../types";
+import { LogEntry, NeuralReading, ChildProfile, ParentProfile, KnowledgeSource, Activity, ScheduledClass, ChatMessage } from "../types";
 
-const IS_DEMO = (id: string) => id === 'demo-user-123';
+// Demo mode removed - all operations now go through Firebase
+const IS_DEMO = (id: string) => false;
 
 /**
  * Robust deep cloning and sanitization for Firestore.
@@ -58,17 +59,35 @@ export const deepSanitize = (data: any): any => {
 };
 
 export const getUserFamilyId = async (userId: string): Promise<string> => {
-  if (IS_DEMO(userId)) return userId;
+  console.log('📝 getUserFamilyId called with userId:', userId);
+
+  if (IS_DEMO(userId)) {
+    console.log('Demo mode detected, returning userId as familyId');
+    return userId;
+  }
+
   try {
     const userDoc = await getDoc(doc(db, "users", userId));
-    if (userDoc.exists() && userDoc.data().familyId) {
-      return userDoc.data().familyId;
+    console.log('User document exists:', userDoc.exists());
+
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      console.log('User document data:', data);
+
+      if (data.familyId) {
+        console.log('✅ Found existing familyId:', data.familyId);
+        return data.familyId;
+      }
     }
+
+    // No familyId found, create new one
     const defaultFamilyId = userId;
+    console.log('Creating new familyId (defaulting to userId):', defaultFamilyId);
     await setDoc(doc(db, "users", userId), { familyId: defaultFamilyId }, { merge: true });
+    console.log('✅ Successfully saved new familyId to Firestore');
     return defaultFamilyId;
   } catch (error) {
-    console.error("Error in getUserFamilyId:", error);
+    console.error("❌ Error in getUserFamilyId:", error);
     return userId;
   }
 };
@@ -113,19 +132,72 @@ export const updateScheduleDay = async (familyId: string, scheduleId: string, ne
 
 export const saveKnowledgeSource = async (familyId: string, source: KnowledgeSource) => {
   if (IS_DEMO(familyId)) return;
-  await addDoc(collection(db, "families", familyId, "knowledge"), deepSanitize(source));
+
+  // Exclude 'id' from the data payload - Firestore document ID is separate
+  const { id, ...dataWithoutId } = source;
+
+  // If source has an id, update it; otherwise add new
+  if (id) {
+    const docRef = doc(db, "families", familyId, "knowledge", id);
+    await setDoc(docRef, deepSanitize(dataWithoutId), { merge: true });
+  } else {
+    await addDoc(collection(db, "families", familyId, "knowledge"), deepSanitize(dataWithoutId));
+  }
 };
 
 export const getKnowledgeSources = async (familyId: string): Promise<KnowledgeSource[]> => {
   if (IS_DEMO(familyId)) return [];
   const q = query(collection(db, "families", familyId, "knowledge"), orderBy("timestamp", "desc"));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as KnowledgeSource));
+  return querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    // Use Firestore's document ID, not the id field in the data (if it exists)
+    const { id: _, ...rest } = data; // Exclude id from data
+    return { id: doc.id, ...rest } as KnowledgeSource;
+  });
 };
 
 export const deleteKnowledgeSource = async (familyId: string, sourceId: string) => {
-  if (IS_DEMO(familyId)) return;
-  await deleteDoc(doc(db, "families", familyId, "knowledge", sourceId));
+  console.log('🔥 deleteKnowledgeSource called with:', { familyId, sourceId });
+
+  if (IS_DEMO(familyId)) {
+    console.log('Demo mode - skipping delete');
+    return;
+  }
+
+  try {
+    const docPath = `families/${familyId}/knowledge/${sourceId}`;
+    console.log('📍 Document path:', docPath);
+
+    const docRef = doc(db, "families", familyId, "knowledge", sourceId);
+    console.log('📄 Document reference created:', docRef.path);
+
+    // Check if document exists before deleting
+    const docSnap = await getDoc(docRef);
+    console.log('Document exists before delete:', docSnap.exists());
+
+    if (!docSnap.exists()) {
+      console.warn('⚠️ Document does not exist in Firestore!');
+      throw new Error(`Document ${sourceId} not found in Firestore`);
+    }
+
+    console.log('🗑️ Attempting to delete document...');
+    await deleteDoc(docRef);
+    console.log('✅ Firestore deleteDoc completed successfully');
+
+    // Verify deletion
+    const verifySnap = await getDoc(docRef);
+    console.log('Document still exists after delete:', verifySnap.exists());
+
+    if (verifySnap.exists()) {
+      console.error('❌ CRITICAL: Document still exists after deletion!');
+      throw new Error('Document deletion failed - document still exists');
+    }
+
+  } catch (error) {
+    console.error('❌ Error in deleteKnowledgeSource:', error);
+    throw error; // Re-throw to propagate to caller
+  }
 };
 
 export const saveActivity = async (familyId: string, activity: Activity) => {
@@ -142,24 +214,76 @@ export const getActivities = async (familyId: string): Promise<Activity[]> => {
 
 export const saveScheduledClass = async (familyId: string, cls: ScheduledClass) => {
   if (IS_DEMO(familyId)) return;
-  await addDoc(collection(db, "families", familyId, "schedule"), deepSanitize(cls));
+
+  // Exclude 'id' from the data payload - Firestore document ID is separate
+  const { id, ...dataWithoutId } = cls;
+
+  const docRef = doc(db, "families", familyId, "schedule", id);
+  await setDoc(docRef, deepSanitize(dataWithoutId));
 };
 
 export const getScheduledClasses = async (familyId: string): Promise<ScheduledClass[]> => {
   if (IS_DEMO(familyId)) return [];
   const querySnapshot = await getDocs(collection(db, "families", familyId, "schedule"));
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledClass));
+  return querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    // Use Firestore's document ID, not the id field in the data (if it exists)
+    const { id: _, ...rest } = data; // Exclude id from data
+    return { id: doc.id, ...rest } as ScheduledClass;
+  });
 };
 
 export const updateScheduledClass = async (familyId: string, cls: ScheduledClass) => {
   if (IS_DEMO(familyId)) return;
-  const docRef = doc(db, "families", familyId, "schedule", cls.id);
-  await setDoc(docRef, deepSanitize(cls), { merge: true });
+
+  // Exclude 'id' from the data payload - Firestore document ID is separate
+  const { id, ...dataWithoutId } = cls;
+
+  const docRef = doc(db, "families", familyId, "schedule", id);
+  await setDoc(docRef, deepSanitize(dataWithoutId), { merge: true });
 };
 
 export const deleteScheduledClass = async (familyId: string, classId: string) => {
-  if (IS_DEMO(familyId)) return;
-  await deleteDoc(doc(db, "families", familyId, "schedule", classId));
+  console.log('🔥 deleteScheduledClass called with:', { familyId, classId });
+
+  if (IS_DEMO(familyId)) {
+    console.log('Demo mode - skipping delete');
+    return;
+  }
+
+  try {
+    const docPath = `families/${familyId}/schedule/${classId}`;
+    console.log('📍 Document path:', docPath);
+
+    const docRef = doc(db, "families", familyId, "schedule", classId);
+    console.log('📄 Document reference created:', docRef.path);
+
+    // Check if document exists before deleting
+    const docSnap = await getDoc(docRef);
+    console.log('Document exists before delete:', docSnap.exists());
+
+    if (!docSnap.exists()) {
+      console.warn('⚠️ Document does not exist in Firestore!');
+      throw new Error(`Document ${classId} not found in Firestore`);
+    }
+
+    console.log('🗑️ Attempting to delete document...');
+    await deleteDoc(docRef);
+    console.log('✅ Firestore deleteDoc completed successfully');
+
+    // Verify deletion
+    const verifySnap = await getDoc(docRef);
+    console.log('Document still exists after delete:', verifySnap.exists());
+
+    if (verifySnap.exists()) {
+      console.error('❌ CRITICAL: Document still exists after deletion!');
+      throw new Error('Document deletion failed - document still exists');
+    }
+
+  } catch (error) {
+    console.error('❌ Error in deleteScheduledClass:', error);
+    throw error; // Re-throw to propagate to caller
+  }
 };
 
 export const saveLog = async (familyId: string, log: LogEntry) => {
@@ -248,4 +372,34 @@ export const getChatMessages = async (familyId: string, userId?: string): Promis
 
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
+};
+
+// Parent Profile Management
+export const saveParentProfile = async (familyId: string, profile: ParentProfile) => {
+  if (IS_DEMO(familyId)) return;
+  const cleaned = deepSanitize(profile);
+  await setDoc(doc(db, "families", familyId, "parents", profile.id), cleaned);
+};
+
+export const getParentProfile = async (familyId: string, userId: string): Promise<ParentProfile | null> => {
+  if (IS_DEMO(familyId)) return null;
+  const docRef = doc(db, "families", familyId, "parents", userId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  return docSnap.data() as ParentProfile;
+};
+
+export const getFamilyParents = async (familyId: string): Promise<ParentProfile[]> => {
+  if (IS_DEMO(familyId)) return [];
+  const querySnapshot = await getDocs(collection(db, "families", familyId, "parents"));
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ParentProfile));
+};
+
+export const deleteParentProfile = async (familyId: string, userId: string) => {
+  if (IS_DEMO(familyId)) return;
+  await deleteDoc(doc(db, "families", familyId, "parents", userId));
+};
+
+export const clearUserFamilyId = async (userId: string) => {
+  await setDoc(doc(db, "users", userId), { familyId: null }, { merge: true });
 };

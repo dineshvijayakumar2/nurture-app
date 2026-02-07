@@ -4,12 +4,15 @@ import { ICONS, PREDEFINED_ICONS } from '../../constants';
 import { useFamily } from '../../context/FamilyContext';
 
 export const LogCard: React.FC<{ log: LogEntry }> = ({ log }) => {
+    const { getParentName } = useFamily();
+    const authorName = getParentName(log.authorId);
+
     return (
         <div className="bg-white rounded-[40px] p-6 shadow-sm border border-slate-100 space-y-4">
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xl">👤</div>
                 <div>
-                    <h4 className="font-bold text-slate-900 text-sm">Family Log</h4>
+                    <h4 className="font-bold text-slate-900 text-sm">{authorName}</h4>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(log.timestamp).toLocaleDateString()}</p>
                 </div>
             </div>
