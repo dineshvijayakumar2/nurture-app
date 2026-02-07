@@ -218,13 +218,19 @@ export const Rhythm = () => {
     const handleLogActivity = async (cls: ScheduledClass, date: Date) => {
         try {
             // Create activity log from scheduled class
+            // Use date-only format to avoid timezone issues
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
+
             await addActivity(
                 cls.name,
                 cls.category,
                 cls.durationHours,
                 0, // cost
                 'neutral' as const, // default mood
-                date.toISOString(), // actual date
+                dateString, // actual date in YYYY-MM-DD format
                 null // no photo
             );
             alert(`✅ Logged "${cls.name}" for ${date.toLocaleDateString()}`);
