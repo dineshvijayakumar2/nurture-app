@@ -30,7 +30,7 @@ export interface Activity {
   notes?: string;
   cost?: number;
   mood?: Mood;
-  iconUrl?: string; 
+  iconUrl?: string;
   photoUrl?: string;
 }
 
@@ -43,7 +43,12 @@ export interface ScheduledClass {
   isRecurring: boolean;
   dayOfWeek?: number; // 0-6
   specificDates?: string[]; // ISO date strings
-  cost?: number;
+  cost?: number; // Cost per session
+
+  // New Fields for Advanced Rhythm
+  startDate: string; // ISO Date String (YYYY-MM-DD)
+  endDate?: string; // ISO Date String (YYYY-MM-DD) or null for ongoing
+  status: 'active' | 'paused' | 'discontinued';
 }
 
 export interface ChildProfile {
@@ -65,8 +70,11 @@ export interface KnowledgeSource {
   id: string;
   title: string;
   content: string;
-  category: 'newsletter' | 'book' | 'article' | 'note';
+  author?: string;
+  cover?: string;
+  type: 'newsletter' | 'book' | 'article' | 'note' | 'video';
   timestamp: string;
+  tags?: string[];
 }
 
 export interface LogEntry {
@@ -77,7 +85,7 @@ export interface LogEntry {
   createdAt: string;
   type: 'text' | 'photo' | 'activity';
   content: string;
-  image?: string; 
+  image?: string;
   extracted: {
     moodScore: number;
     moodLabels: string[];
@@ -86,17 +94,28 @@ export interface LogEntry {
     domains: Domain[];
     summary: string;
     activityData?: Partial<Activity>;
+    scheduleUpdate?: {
+      action: 'add' | 'update' | 'stop';
+      className: string;
+      category?: ActivityCategory;
+      dayOfWeek?: number;
+      startTime?: string;
+      durationHours?: number;
+      startDate?: string;
+      endDate?: string;
+      reason?: string;
+    };
   };
 }
 
 export interface NeuralReading {
   id: string;
   timestamp: string;
-  architecture: string; 
+  architecture: string;
   currentReading: string;
   scienceBackground: string;
-  forecast: string; 
-  milestoneWindow: string; 
+  forecast: string;
+  milestoneWindow: string;
   citations: string[];
   activityTrends?: string;
   nutritionAdvice?: string; // New: AI recommendations based on activity
@@ -108,6 +127,7 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   image?: string;
+  userId?: string; // New: persisted per user
 }
 
 export interface ValueDialogue {

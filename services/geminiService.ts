@@ -29,7 +29,8 @@ export const processLogEntry = async (
     config: {
       systemInstruction: `Analyze ${child.name}'s moment (age ${child.age}). 
       Identify mood, activity, and growth domain.
-      CRITICAL: If the parent mentions a class, sport, movie, or specific practice, extract structured 'activityData'.
+      CRITICAL: if the text implies a NEW or CHANGED recurring schedule (e.g. 'Started Ballet on Mondays', 'Stopped Swimming'), extract 'scheduleUpdate'.
+      IMPORTANT: Extract the SPECIFIC start date if mentioned (e.g. 'October 2, 2024'). If a relative day is mentioned ('started today'), use the current date placeholder.
       Output in JSON.`,
       responseMimeType: "application/json",
       responseSchema: {
@@ -48,6 +49,20 @@ export const processLogEntry = async (
               category: { type: Type.STRING },
               durationHours: { type: Type.NUMBER }
             }
+          },
+          scheduleUpdate: {
+            type: Type.OBJECT,
+            properties: {
+              action: { type: Type.STRING, enum: ["add", "update", "stop"] },
+              className: { type: Type.STRING },
+              category: { type: Type.STRING },
+              dayOfWeek: { type: Type.NUMBER },
+              startTime: { type: Type.STRING },
+              durationHours: { type: Type.NUMBER },
+              startDate: { type: Type.STRING },
+              endDate: { type: Type.STRING },
+              reason: { type: Type.STRING }
+            }
           }
         }
       }
@@ -58,14 +73,14 @@ export const processLogEntry = async (
 
 export const generateActivityIcon = async (activityName: string): Promise<string> => {
   const ai = aiClient();
-  const prompt = `A soft sticker icon of ${activityName}. Minimalist, whimsical watercolor style, pure white background.`;
+  const prompt = `A soft sticker icon of ${activityName}.Minimalist, whimsical watercolor style, pure white background.`;
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: { parts: [{ text: prompt }] },
     config: { imageConfig: { aspectRatio: "1:1" } }
   });
   for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+    if (part.inlineData) return `data: image / png; base64, ${part.inlineData.data} `;
   }
   return "";
 };
@@ -77,27 +92,27 @@ export const generateNeuralReading = async (
 ): Promise<NeuralReading> => {
   const ai = aiClient();
   const kb = formatKnowledgeBase(knowledge);
-  
-  const dietInfo = child.dietaryPreferences 
-    ? `DIET: ${child.dietaryPreferences.type}, ALLERGIES: ${child.dietaryPreferences.allergies.join(', ')}`
+
+  const dietInfo = child.dietaryPreferences
+    ? `DIET: ${child.dietaryPreferences.type}, ALLERGIES: ${child.dietaryPreferences.allergies.join(', ')} `
     : "DIET: Standard";
 
   const activitySummary = logs
     .filter(l => l.extracted.activityData)
-    .map(l => `${l.extracted.activityData?.name}: ${l.extracted.activityData?.durationHours}hrs`)
+    .map(l => `${l.extracted.activityData?.name}: ${l.extracted.activityData?.durationHours} hrs`)
     .join('; ');
 
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
-    contents: `HISTORY: ${JSON.stringify(logs)}\nACTIVITY: ${activitySummary}\n${dietInfo}\n${kb}`,
+    contents: `HISTORY: ${JSON.stringify(logs)} \nACTIVITY: ${activitySummary} \n${dietInfo} \n${kb} `,
     config: {
       systemInstruction: `You are Nurture, a child development and nutrition expert. 
-      Analyze ${child.name}'s week.
-      1. Growth Architecture: Define the phase.
+      Analyze ${child.name} 's week.
+  1. Growth Architecture: Define the phase.
       2. Neural Reading: The story.
-      3. Nutrition Advice: Provide 3 specific food recommendations tailored to their activity level (e.g., higher carb/protein for sports weeks) and dietary constraints. Avoid allergens.
+      3. Nutrition Advice: Provide 3 specific food recommendations tailored to their activity level(e.g., higher carb / protein for sports weeks) and dietary constraints.Avoid allergens.
       4. Science: The 'why' behind the growth.
-      Format in JSON.`,
+  Format in JSON.`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -133,12 +148,12 @@ export const generateChatResponse = async (
   const ai = aiClient();
   const kb = formatKnowledgeBase(knowledge);
   const historyParts = history.map(msg => ({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] }));
-  
+
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
-    contents: [...historyParts, { role: 'user', parts: [{ text: `CONTEXT: ${child.name} (${child.age}). ${kb}` }]}],
+    contents: [...historyParts, { role: 'user', parts: [{ text: `CONTEXT: ${child.name} (${child.age}). ${kb} ` }] }],
     config: {
-      systemInstruction: `You are the Nurture Companion. Ground advice in child development science and provided family wisdom. Be warm and supportive.`
+      systemInstruction: `You are the Nurture Companion.Ground advice in child development science and provided family wisdom.Be warm and supportive.`
     }
   });
   return response.text || "I'm processing that. Tell me more?";
@@ -146,11 +161,14 @@ export const generateChatResponse = async (
 
 export const generateValueDialogue = async (value: Value, child: ChildProfile, logs: LogEntry[], knowledge: KnowledgeSource[] = []): Promise<ValueDialogue> => {
   const ai = aiClient();
+  const recentLogs = logs.slice(0, 5).map(l => l.content).join('\n');
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
-    contents: `Value: ${value}.\nChild: ${child.name}`,
+    contents: `Value: ${value}.\nChild: ${child.name} (Age: ${child.age})\nRECENT MOMENTS:\n${recentLogs}`,
     config: {
-      systemInstruction: `Generate a value dialogue guide in JSON.`,
+      systemInstruction: `Generate a value dialogue guide in JSON. 
+      CRITICAL: Use the 'RECENT MOMENTS' to create 'conversationStarters' that connect the value to actual things that happened recently. 
+      For example, if the child helped a friend, and the value is Kindness, start with "I loved how you helped..."`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nurture-v1';
+const CACHE_NAME = 'nurture-v2-dev';
 const ASSETS = [
   '/',
   '/index.html',

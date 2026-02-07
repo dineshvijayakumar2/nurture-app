@@ -1,19 +1,21 @@
 
-import { 
-  collection, 
-  doc, 
-  setDoc, 
+import * as firestore from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  setDoc,
   getDoc,
-  getDocs, 
-  query, 
-  orderBy, 
+  getDocs,
+  query,
+  orderBy,
   addDoc,
   deleteDoc,
   writeBatch,
-  updateDoc
+  updateDoc,
+  where
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { LogEntry, NeuralReading, ChildProfile, KnowledgeSource, Activity, ScheduledClass } from "../types";
+import { LogEntry, NeuralReading, ChildProfile, KnowledgeSource, Activity, ScheduledClass, ChatMessage } from "../types";
 
 const IS_DEMO = (id: string) => id === 'demo-user-123';
 
@@ -37,16 +39,16 @@ export const deepSanitize = (data: any): any => {
   const sanitized: Record<string, any> = {};
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined || typeof value === 'function') continue;
-    
+
     // Firestore map keys cannot contain dots or special path chars
     const cleanKey = key.trim().replace(/\./g, '_').replace(/[\/\[\]\*\?]/g, '-');
     const sanitizedValue = deepSanitize(value);
-    
+
     if (sanitizedValue !== undefined) {
       sanitized[cleanKey] = sanitizedValue;
     }
   }
-  
+
   // Final safety: ensure it's a plain JS object via stringify/parse to strip any Proxy artifacts
   try {
     return JSON.parse(JSON.stringify(sanitized));
@@ -149,6 +151,12 @@ export const getScheduledClasses = async (familyId: string): Promise<ScheduledCl
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduledClass));
 };
 
+export const updateScheduledClass = async (familyId: string, cls: ScheduledClass) => {
+  if (IS_DEMO(familyId)) return;
+  const docRef = doc(db, "families", familyId, "schedule", cls.id);
+  await setDoc(docRef, deepSanitize(cls), { merge: true });
+};
+
 export const deleteScheduledClass = async (familyId: string, classId: string) => {
   if (IS_DEMO(familyId)) return;
   await deleteDoc(doc(db, "families", familyId, "schedule", classId));
@@ -191,4 +199,53 @@ export const clearAllFamilyData = async (familyId: string) => {
   }
   batch.delete(doc(db, "families", familyId, "profiles", "main"));
   await batch.commit();
+};
+export const migrateLegacyLogs = async (familyId: string, userId: string) => {
+  if (IS_DEMO(familyId)) return;
+  const q = query(collection(db, "families", familyId, "logs"));
+  const querySnapshot = await getDocs(q);
+  const batch = writeBatch(db);
+  let count = 0;
+
+  querySnapshot.docs.forEach((docSnap) => {
+    const data = docSnap.data();
+    if (!data.authorId || !data.visibility) {
+      batch.update(docSnap.ref, {
+        authorId: userId,
+        visibility: 'family'
+      });
+      count++;
+    }
+  });
+
+  if (count > 0) {
+    await batch.commit();
+    console.log(`Migrated ${count} logs.`);
+  } else {
+    console.log("No logs needed migration.");
+  }
+  return count;
+};
+
+export const saveChatMessage = async (familyId: string, message: ChatMessage) => {
+  if (IS_DEMO(familyId)) return;
+  await addDoc(collection(db, "families", familyId, "chats"), deepSanitize(message));
+};
+
+export const getChatMessages = async (familyId: string, userId?: string): Promise<ChatMessage[]> => {
+  if (IS_DEMO(familyId)) return [];
+
+  let q;
+  if (userId) {
+    q = query(
+      collection(db, "families", familyId, "chats"),
+      where("userId", "==", userId),
+      orderBy("timestamp", "asc")
+    );
+  } else {
+    q = query(collection(db, "families", familyId, "chats"), orderBy("timestamp", "asc"));
+  }
+
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ChatMessage));
 };
