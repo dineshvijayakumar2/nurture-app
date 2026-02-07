@@ -25,7 +25,7 @@ const CATEGORIES: { value: ActivityCategory; label: string; icon: string; color:
 ];
 
 export const Rhythm = () => {
-    const { child, scheduledClasses, addSchedule, updateSchedule, deleteSchedule, isLoading } = useFamily();
+    const { child, scheduledClasses, addSchedule, updateSchedule, deleteSchedule, addActivity, isLoading } = useFamily();
     const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
@@ -212,6 +212,25 @@ export const Rhythm = () => {
         } catch (error) {
             console.error('Failed to delete schedule:', error);
             alert('Failed to delete activity. Please try again.');
+        }
+    };
+
+    const handleLogActivity = async (cls: ScheduledClass, date: Date) => {
+        try {
+            // Create activity log from scheduled class
+            await addActivity(
+                cls.name,
+                cls.category,
+                cls.durationHours,
+                0, // cost
+                'neutral' as const, // default mood
+                date.toISOString(), // actual date
+                null // no photo
+            );
+            alert(`✅ Logged "${cls.name}" for ${date.toLocaleDateString()}`);
+        } catch (error) {
+            console.error('Failed to log activity:', error);
+            alert('Failed to log activity. Please try again.');
         }
     };
 
@@ -483,25 +502,33 @@ export const Rhythm = () => {
                                                     </div>
 
                                                     {/* Quick Actions */}
-                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
                                                         <button
-                                                            onClick={() => handleOpenEdit(cls, date.getDay())}
-                                                            className="flex-1 py-1.5 bg-white rounded-lg text-[8px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 transition-colors"
+                                                            onClick={() => handleLogActivity(cls, date)}
+                                                            className="w-full py-1.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[8px] font-black uppercase tracking-wider hover:shadow-md transition-all"
                                                         >
-                                                            Edit Time
+                                                            ✓ Log It
                                                         </button>
-                                                        <button
-                                                            onClick={() => handleOpenEdit(cls)}
-                                                            className="flex-1 py-1.5 bg-blue-50 rounded-lg text-[8px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
-                                                        >
-                                                            Full Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(cls.id)}
-                                                            className="flex-1 py-1.5 bg-red-50 rounded-lg text-[8px] font-black uppercase tracking-wider text-red-600 hover:bg-red-100 transition-colors"
-                                                        >
-                                                            Remove
-                                                        </button>
+                                                        <div className="flex gap-1">
+                                                            <button
+                                                                onClick={() => handleOpenEdit(cls, date.getDay())}
+                                                                className="flex-1 py-1.5 bg-white rounded-lg text-[8px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 transition-colors"
+                                                            >
+                                                                Edit Time
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleOpenEdit(cls)}
+                                                                className="flex-1 py-1.5 bg-blue-50 rounded-lg text-[8px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(cls.id)}
+                                                                className="flex-1 py-1.5 bg-red-50 rounded-lg text-[8px] font-black uppercase tracking-wider text-red-600 hover:bg-red-100 transition-colors"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
@@ -654,25 +681,27 @@ export const Rhythm = () => {
                                                 </div>
 
                                                 {/* Quick Actions */}
-                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
                                                     <button
-                                                        onClick={() => handleOpenEdit(cls, selectedMonthDate?.getDay())}
-                                                        className="flex-1 py-2 bg-white rounded-lg text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-200 transition-colors"
+                                                        onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate)}
+                                                        className="w-full py-2 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
                                                     >
-                                                        Edit Time
+                                                        ✓ Log It
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleOpenEdit(cls)}
-                                                        className="flex-1 py-2 bg-blue-50 rounded-lg text-[9px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
-                                                    >
-                                                        Full Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(cls.id)}
-                                                        className="flex-1 py-2 bg-red-50 rounded-lg text-[9px] font-black uppercase tracking-wider text-red-600 hover:bg-red-100 transition-colors"
-                                                    >
-                                                        Remove
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => handleOpenEdit(cls, selectedMonthDate?.getDay())}
+                                                            className="flex-1 py-2 bg-white rounded-lg text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-200 transition-colors"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(cls.id)}
+                                                            className="flex-1 py-2 bg-red-50 rounded-lg text-[9px] font-black uppercase tracking-wider text-red-600 hover:bg-red-100 transition-colors"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
