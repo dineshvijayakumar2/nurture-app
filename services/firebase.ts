@@ -1,6 +1,6 @@
 
 // Initialize Firebase modular SDK
-// Use named export 'initializeApp' to resolve the property access error on the namespace
+// Fixed: Using named imports for modular SDK compatibility
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -15,7 +15,7 @@ const firebaseConfig = {
   measurementId: "G-7K44J5EPP1"
 };
 
-// Initialize app using the named export directly as per Firebase v9+ documentation
+// Fixed: Correct call to initializeApp from modular SDK
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);

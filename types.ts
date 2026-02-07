@@ -18,20 +18,66 @@ export enum Value {
   KINDNESS = 'Kindness'
 }
 
+export type ActivityCategory = 'sport' | 'art' | 'media' | 'academic' | 'adhoc' | 'travel';
+export type Mood = 'happy' | 'neutral' | 'tired' | 'frustrated' | 'proud' | 'excited';
+
+export interface Activity {
+  id: string;
+  name: string;
+  category: ActivityCategory;
+  timestamp: string; // ISO string
+  durationHours: number;
+  notes?: string;
+  cost?: number;
+  mood?: Mood;
+  iconUrl?: string; 
+  photoUrl?: string;
+}
+
+export interface ScheduledClass {
+  id: string;
+  name: string;
+  category: ActivityCategory;
+  startTime: string;
+  durationHours: number;
+  isRecurring: boolean;
+  dayOfWeek?: number; // 0-6
+  specificDates?: string[]; // ISO date strings
+  cost?: number;
+}
+
 export interface ChildProfile {
   id: string;
+  familyId: string;
   name: string;
   age: number;
   activities: string[];
   temperament: string;
+  photoUrl?: string;
+  activityIcons?: Record<string, string>;
+  dietaryPreferences?: {
+    type: 'vegan' | 'vegetarian' | 'omnivore' | 'none';
+    allergies: string[];
+  };
+}
+
+export interface KnowledgeSource {
+  id: string;
+  title: string;
+  content: string;
+  category: 'newsletter' | 'book' | 'article' | 'note';
+  timestamp: string;
 }
 
 export interface LogEntry {
   id: string;
+  authorId: string;
+  visibility: 'family' | 'private';
   timestamp: string;
-  type: 'text' | 'voice' | 'photo';
+  createdAt: string;
+  type: 'text' | 'photo' | 'activity';
   content: string;
-  image?: string; // base64 string
+  image?: string; 
   extracted: {
     moodScore: number;
     moodLabels: string[];
@@ -39,29 +85,35 @@ export interface LogEntry {
     behavioralFlags: string[];
     domains: Domain[];
     summary: string;
+    activityData?: Partial<Activity>;
   };
 }
 
-export interface InsightCard {
+export interface NeuralReading {
   id: string;
-  title: string;
-  observation: string;
-  researchInsight: string;
-  citation: {
-    source: string;
-    author: string;
-    page?: string;
-  };
-  actionItems: string[];
-  conversationStarter: string;
-  values: Value[];
-  priority: 'low' | 'medium' | 'high';
   timestamp: string;
+  architecture: string; 
+  currentReading: string;
+  scienceBackground: string;
+  forecast: string; 
+  milestoneWindow: string; 
+  citations: string[];
+  activityTrends?: string;
+  nutritionAdvice?: string; // New: AI recommendations based on activity
 }
 
-export interface MediaGuide {
-  title: string;
-  themes: string[];
-  questions: string[];
-  realLifeConnection: string;
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  timestamp: string;
+  image?: string;
+}
+
+export interface ValueDialogue {
+  value: Value;
+  philosophicalRoot: string;
+  contextualScenario: string;
+  conversationStarters: string[];
+  teachingMoments: string[];
 }

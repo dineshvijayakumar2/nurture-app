@@ -1,54 +1,79 @@
 
 import React from 'react';
-import { InsightCard } from '../types';
+import { NeuralReading } from '../types';
 
 interface InsightCardViewProps {
-  insight: InsightCard;
+  reading: NeuralReading;
 }
 
-export const InsightCardView: React.FC<InsightCardViewProps> = ({ insight }) => {
+export const InsightCardView: React.FC<InsightCardViewProps> = ({ reading }) => {
   return (
-    <div className="bg-white rounded-2xl border-2 border-[#A8C5A8] p-6 shadow-sm mb-6">
-      <div className="flex items-center space-x-2 mb-4">
-        <span className="text-2xl">🌱</span>
-        <h3 className="font-bold text-lg text-[#4A5568] uppercase tracking-wide">{insight.title}</h3>
-      </div>
+    <div className="bg-[#111827] rounded-[56px] p-10 shadow-2xl border border-white/5 relative overflow-hidden group animate-in zoom-in duration-700">
+      {/* Gentle glow */}
+      <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] -mr-40 -mt-40"></div>
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#A8C5A8]/5 rounded-full blur-[100px] -ml-40 -mb-40"></div>
 
-      <div className="space-y-4">
-        <section>
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Observation</h4>
-          <p className="text-[#4A5568] text-sm leading-relaxed">{insight.observation}</p>
-        </section>
+      <header className="relative z-10 mb-12 text-center">
+        <div className="inline-block px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-[#A8C5A8] uppercase tracking-[0.5em] mb-6">
+          Growth Update
+        </div>
+        <h3 className="text-4xl font-black text-white font-['Quicksand'] tracking-tighter mb-4 group-hover:scale-105 transition-transform duration-500">
+          {reading.architecture}
+        </h3>
+        <p className="text-xs font-black text-slate-400 uppercase tracking-[0.4em]">{new Date(reading.timestamp).toLocaleDateString()}</p>
+      </header>
 
-        <section className="bg-[#FFF9E6] -mx-6 px-6 py-4 border-y border-[#A8C5A8]/30">
-          <h4 className="text-xs font-bold text-[#A8C5A8] uppercase tracking-widest mb-1">Research Insight</h4>
-          <p className="text-[#4A5568] text-sm italic leading-relaxed">"{insight.researchInsight}"</p>
-          <div className="mt-2 text-[10px] font-bold text-gray-500 uppercase">
-            Source: {insight.citation.author} ({insight.citation.source})
+      <div className="space-y-12 relative z-10">
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="h-px flex-1 bg-white/10"></div>
+            <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">The Story So Far</h4>
+            <div className="h-px flex-1 bg-white/10"></div>
+          </div>
+          <div className="text-white text-2xl leading-[1.7] font-medium italic text-center px-4 whitespace-pre-wrap">
+            "{reading.currentReading}"
           </div>
         </section>
 
-        <section>
-          <h4 className="text-xs font-bold text-[#6B9AC4] uppercase tracking-widest mb-1">Actionable Steps</h4>
-          <ul className="list-disc list-inside text-sm text-[#4A5568] space-y-1">
-            {insight.actionItems.map((item, idx) => (
-              <li key={idx}>{item}</li>
+        <section className="bg-white/5 backdrop-blur-md rounded-[48px] p-10 border border-white/10">
+          <h4 className="text-xs font-black text-[#A8C5A8] uppercase tracking-[0.4em] mb-6 flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-[#A8C5A8] animate-pulse"></span> Look for next
+          </h4>
+          <div className="text-white/90 text-[19px] font-bold leading-[1.65] mb-8 whitespace-pre-wrap">
+            {reading.forecast}
+          </div>
+          <div className="p-6 bg-indigo-500/10 rounded-3xl border border-indigo-500/20">
+            <p className="text-[11px] text-indigo-300 font-black uppercase tracking-widest mb-2">A goal for now</p>
+            <p className="text-lg text-white/70 font-bold leading-relaxed whitespace-pre-wrap">{reading.milestoneWindow}</p>
+          </div>
+        </section>
+
+        {reading.activityTrends && (
+          <section className="bg-indigo-950/20 rounded-[48px] p-10 border border-indigo-500/10">
+            <h4 className="text-xs font-black text-indigo-400 uppercase tracking-[0.4em] mb-6">Activity Trends</h4>
+            <div className="text-white/80 text-lg leading-relaxed whitespace-pre-wrap">
+              {reading.activityTrends}
+            </div>
+          </section>
+        )}
+
+        <section className="space-y-6">
+          <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] text-center">Helpful Science</h4>
+          <div className="text-white/60 text-lg leading-relaxed text-center px-4 font-medium whitespace-pre-wrap">
+            {reading.scienceBackground}
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 pt-6">
+            {reading.citations?.map((c, i) => (
+              <span key={i} className="px-4 py-2 bg-white/5 text-[10px] font-black text-white/30 rounded-xl uppercase tracking-widest border border-white/5">
+                {c}
+              </span>
             ))}
-          </ul>
+          </div>
         </section>
 
-        <section className="bg-[#E8A598]/10 rounded-xl p-3 border border-[#E8A598]/20">
-          <h4 className="text-xs font-bold text-[#E8A598] uppercase tracking-widest mb-1">Conversation Starter</h4>
-          <p className="text-sm font-medium text-[#4A5568]">"{insight.conversationStarter}"</p>
-        </section>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-        {insight.values.map((v, i) => (
-          <span key={i} className="px-2 py-1 bg-gray-100 text-[10px] font-bold text-gray-500 rounded uppercase tracking-tighter">
-            {v}
-          </span>
-        ))}
+        <button className="w-full py-7 bg-white text-slate-900 rounded-[32px] font-black uppercase tracking-[0.4em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-2xl">
+          More Details →
+        </button>
       </div>
     </div>
   );

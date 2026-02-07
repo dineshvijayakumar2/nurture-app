@@ -1,0 +1,22 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users can only access their own user profile document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Families and all subcollections (profiles, logs, insights)
+    // Access is granted if the user's record (which they own) matches this familyId
+    match /families/{familyId}/{document=**} {
+      allow read, write: if request.auth != null && (
+        // Case 1: The user IS the family creator (Family ID matches their UID)
+        familyId == request.auth.uid || 
+        // Case 2: The user has JOINED this family (their user record points to it)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId
+      );
+    }
+  }
+}

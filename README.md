@@ -1,20 +1,33 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# NURTURE
+## AI-Powered Child Development Companion
 
-# Run and deploy your AI Studio app
+### Technical Specification
+**Built with Gemini 3**
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/drive/1n2lRj2DmDMh6n_n7hTqpaSHtUKcZpVdd
+# 1. Executive Summary
 
-## Run Locally
+Nurture is an AI-powered child development companion that helps parents understand their children deeply through intelligent pattern recognition, research-backed insights, and values-based guidance. Using Gemini 3's multimodal capabilities, Nurture transforms everyday observations into actionable parenting wisdom.
 
-**Prerequisites:**  Node.js
+## 1.1 The Core Problem
+Parents today are overwhelmed with information but lack personalized, contextual insights about their specific child.
 
+## 1.2 The Solution
+Nurture provides:
+- Multimodal memory capture (text, photos)
+- AI-powered pattern detection across time
+- Research-backed insight cards with simple, warm advice
+- High legibility design optimized for mobile "Kindle-like" reading
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
+
+# 2. Features
+- **Home:** A glance at your child's recent growth story.
+- **Moments:** Record memories, photos, and observations.
+- **Growth Path:** AI-synthesized updates on your child's developmental phase.
+- **Companion:** A warm AI coach to answer parenting questions using context from your child's history.
+- **Privacy Vault:** Local-first approach to family data.
+
+---
+*January 2026*

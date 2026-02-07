@@ -3,6 +3,7 @@
   "description": "An AI-powered child development companion that helps parents understand their children through pattern recognition, research-backed insights, and values-based guidance.",
   "requestFramePermissions": [
     "microphone",
-    "camera"
+    "camera",
+    "geolocation"
   ]
 }

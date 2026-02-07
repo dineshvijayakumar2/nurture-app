@@ -12,7 +12,9 @@
     "react-dom": "^19.2.3",
     "react": "^19.2.3",
     "@google/genai": "^1.38.0",
-    "firebase": "^12.8.0"
+    "firebase": "^12.8.0",
+    "react-easy-crop": "^5.2.0",
+    "@hello-pangea/dnd": "^18.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

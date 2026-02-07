@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import Cropper from 'react-easy-crop';
 import { ChildProfile } from '../types';
 import { ICONS } from '../constants';
 
@@ -8,17 +9,48 @@ interface ProfileModalProps {
   onClose: () => void;
   onSave: (updatedProfile: ChildProfile) => void;
   initialData: ChildProfile;
+  familyId: string;
+  onJoinFamily: (fid: string) => void;
+  onNeuralBurn: () => void;
 }
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+const DIET_TYPES = ['none', 'vegan', 'vegetarian', 'omnivore'] as const;
+
+export const ProfileModal: React.FC<ProfileModalProps> = ({ 
+  isOpen, onClose, onSave, initialData, familyId, onJoinFamily, onNeuralBurn 
+}) => {
   const [formData, setFormData] = useState({
     name: initialData.name,
     age: initialData.age.toString(),
     activities: initialData.activities.join(', '),
-    temperament: initialData.temperament
+    temperament: initialData.temperament,
+    photoUrl: initialData.photoUrl || '',
+    dietType: initialData.dietaryPreferences?.type || 'none',
+    allergies: initialData.dietaryPreferences?.allergies.join(', ') || ''
   });
+  
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tempPhotoUrl, setTempPhotoUrl] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: initialData.name,
+        age: initialData.age.toString(),
+        activities: initialData.activities.join(', '),
+        temperament: initialData.temperament,
+        photoUrl: initialData.photoUrl || '',
+        dietType: initialData.dietaryPreferences?.type || 'none',
+        allergies: initialData.dietaryPreferences?.allergies.join(', ') || ''
+      });
+    }
+  }, [isOpen, initialData]);
+
+  const onCropComplete = useCallback((_: any, pixels: any) => setCroppedAreaPixels(pixels), []);
 
   const handleSave = () => {
     onSave({
@@ -26,80 +58,71 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onS
       name: formData.name,
       age: parseInt(formData.age) || initialData.age,
       activities: formData.activities.split(',').map(s => s.trim()).filter(s => s),
-      temperament: formData.temperament
+      temperament: formData.temperament,
+      photoUrl: formData.photoUrl,
+      dietaryPreferences: {
+        type: formData.dietType as any,
+        allergies: formData.allergies.split(',').map(s => s.trim()).filter(s => s)
+      }
     });
     onClose();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-[#4A5568]">Edit Profile</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
-            <ICONS.Close className="w-6 h-6" />
-          </button>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-hidden">
+      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-xl" onClick={onClose}></div>
+      <div className="bg-white/95 backdrop-blur-3xl w-full max-w-lg rounded-[56px] p-10 shadow-2xl relative animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh] no-scrollbar">
+        <div className="flex justify-between items-center mb-10">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Settings</h2>
+          <button onClick={onClose} className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center"><ICONS.Close className="w-6 h-6" /></button>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Child's Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-[#A8C5A8] text-sm text-gray-800"
-              placeholder="Name"
-            />
+        <div className="space-y-10">
+          <div className="flex flex-col items-center">
+            <div onClick={() => fileInputRef.current?.click()} className="w-32 h-32 rounded-[40px] bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden cursor-pointer">
+              {formData.photoUrl ? <img src={formData.photoUrl} className="w-full h-full object-cover" /> : <ICONS.Camera className="w-10 h-10 text-slate-200" />}
+            </div>
+            <input type="file" ref={fileInputRef} onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setTempPhotoUrl(reader.result as string); reader.readAsDataURL(file); } }} className="hidden" />
           </div>
 
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Age</label>
-            <input
-              type="number"
-              value={formData.age}
-              onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-[#A8C5A8] text-sm text-gray-800"
-              placeholder="Age"
-            />
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Name</label>
+              <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Age</label>
+              <input type="number" value={formData.age} onChange={e => setFormData({ ...formData, age: e.target.value })} className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold" />
+            </div>
           </div>
 
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Activities (comma separated)</label>
-            <input
-              type="text"
-              value={formData.activities}
-              onChange={(e) => setFormData({ ...formData, activities: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-[#A8C5A8] text-sm text-gray-800"
-              placeholder="e.g. Reading, Swimming, Dance"
-            />
+          <div className="space-y-6 pt-6 border-t border-slate-50">
+             <h3 className="text-[11px] font-black text-[#A8C5A8] uppercase tracking-[0.4em]">Nutrition & Preferences</h3>
+             <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dietary Preference</label>
+                  <select value={formData.dietType} onChange={e => setFormData({ ...formData, dietType: e.target.value })} className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold">
+                    {DIET_TYPES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Allergies</label>
+                  <input value={formData.allergies} onChange={e => setFormData({ ...formData, allergies: e.target.value })} placeholder="Nuts, Milk, etc." className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 font-bold" />
+                </div>
+             </div>
           </div>
 
-          <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Temperament & Personality</label>
-            <textarea
-              value={formData.temperament}
-              onChange={(e) => setFormData({ ...formData, temperament: e.target.value })}
-              className="w-full h-24 p-4 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-[#A8C5A8] resize-none text-sm text-gray-800"
-              placeholder="Describe your child's personality..."
-            />
-          </div>
-        </div>
+          <button onClick={handleSave} className="w-full py-8 bg-slate-900 text-white rounded-[32px] font-black uppercase tracking-[0.4em] text-xs shadow-xl active:scale-95 transition-all">Save Profile</button>
 
-        <div className="mt-8 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 text-gray-500 font-bold uppercase tracking-widest text-xs border border-gray-200 rounded-xl"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 py-3 bg-[#A8C5A8] text-white rounded-xl font-bold uppercase tracking-widest text-xs shadow-md active:scale-95 transition-transform"
-          >
-            Save Changes
-          </button>
+          <div className="bg-slate-950 p-8 rounded-[40px] text-white">
+            <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-3">Family Secure ID</p>
+            <div className="flex gap-2">
+              <div className="flex-1 bg-white/10 p-4 rounded-2xl text-[11px] font-mono truncate">{familyId}</div>
+              <button onClick={() => { navigator.clipboard.writeText(familyId); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className="px-6 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase">{copied ? 'Copied' : 'Copy'}</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -9,6 +9,21 @@ export const COLORS = {
   SLATE: '#4A5568',
 };
 
+export const PREDEFINED_ICONS: Record<string, string> = {
+  sport: '⚽',
+  art: '🎨',
+  academic: '📚',
+  media: '🎬',
+  travel: '✈️',
+  adhoc: '🌟',
+  music: '🎵',
+  swimming: '🏊',
+  badminton: '🏸',
+  soccer: '⚽',
+  reading: '📖',
+  math: '🔢'
+};
+
 export const ICONS = {
   Home: (props: any) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -39,5 +54,8 @@ export const ICONS = {
   ),
   Close: (props: any) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  ),
+  Calendar: (props: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
   )
 };
