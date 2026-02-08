@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useFamily } from '../context/FamilyContext';
 import { ICONS } from '../constants';
+import { ScheduledClass } from '../types';
 
 export const Rhythm = () => {
-    const { child, activities, scheduledClasses } = useFamily();
+    const { child, activities, scheduledClasses, updateSchedule, deleteSchedule } = useFamily();
     const [expandedClass, setExpandedClass] = useState<string | null>(null);
+    const [editingSchedule, setEditingSchedule] = useState<ScheduledClass | null>(null);
 
     // Calculate attendance statistics
     const attendanceStats = useMemo(() => {
@@ -69,6 +71,7 @@ export const Rhythm = () => {
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Duration</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Period</th>
                                     <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -132,6 +135,33 @@ export const Rhythm = () => {
                                                 }`}>
                                                     {cls.isRecurring ? '🔄 Recurring' : '📅 One-time'}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            const confirmed = window.confirm(`Pause or discontinue "${cls.name}"?\n\nClick OK to set to 'paused', Cancel to skip.`);
+                                                            if (confirmed) {
+                                                                updateSchedule({ ...cls, status: 'paused' });
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors"
+                                                        title="Pause activity"
+                                                    >
+                                                        ⏸ Pause
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm(`Remove "${cls.name}" from schedule?`)) {
+                                                                deleteSchedule(cls.id);
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors"
+                                                        title="Delete activity"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -238,12 +268,6 @@ export const Rhythm = () => {
                                                                             year: 'numeric'
                                                                         })}
                                                                     </div>
-                                                                    {activity.mood && (
-                                                                        <div className="text-[9px] text-slate-400 font-bold uppercase">
-                                                                            {activity.mood === 'happy' && '😊 Happy'}
-                                                                            {activity.mood === 'neutral' && '😐 Neutral'}
-                                                                        </div>
-                                                                    )}
                                                                 </div>
                                                             </div>
                                                             <div className="text-sm font-black text-[#A8C5A8]">

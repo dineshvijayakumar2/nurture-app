@@ -902,7 +902,7 @@ export const Dashboard = () => {
                                                         )}
                                                         <div className="flex gap-2">
                                                             <button
-                                                                onClick={() => handleOpenEdit(cls, selectedMonthDate?.getDay())}
+                                                                onClick={() => handleOpenEdit(cls)}
                                                                 className="flex-1 py-2 bg-white rounded-lg text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-200 transition-colors"
                                                             >
                                                                 Edit
