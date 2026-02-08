@@ -159,9 +159,9 @@ export const Rhythm = () => {
                         <div className="text-xs opacity-80 mt-2">All time attendance</div>
                     </div>
                     <div className="bg-white rounded-[32px] p-6 border-2 border-slate-200 shadow-sm">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Total Classes</div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Total Sessions</div>
                         <div className="text-4xl font-black text-slate-900">{attendanceStats.totalClasses}</div>
-                        <div className="text-xs text-slate-500 mt-2">Sessions logged</div>
+                        <div className="text-xs text-slate-500 mt-2">Activities logged</div>
                     </div>
                     <div className="bg-white rounded-[32px] p-6 border-2 border-slate-200 shadow-sm">
                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Avg/Week</div>

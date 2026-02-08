@@ -60,6 +60,7 @@ export const Dashboard = () => {
         startDate: new Date().toISOString().split('T')[0],
         endDate: '',
         isRecurring: true,
+        weekOccurrences: [] as number[], // 1-5 for 1st, 2nd, 3rd, 4th, 5th week
     });
 
     const resetForm = () => {
@@ -74,6 +75,7 @@ export const Dashboard = () => {
             startDate: new Date().toISOString().split('T')[0],
             endDate: '',
             isRecurring: true,
+            weekOccurrences: [],
         });
         setEditingClass(null);
     };
@@ -89,6 +91,20 @@ export const Dashboard = () => {
                 ...prev,
                 selectedDays: newSelectedDays,
                 day: newSelectedDays[0] || dayIndex,
+            };
+        });
+    };
+
+    const toggleWeekOccurrence = (weekNum: number) => {
+        setFormData(prev => {
+            const isSelected = prev.weekOccurrences.includes(weekNum);
+            const newWeekOccurrences = isSelected
+                ? prev.weekOccurrences.filter(w => w !== weekNum)
+                : [...prev.weekOccurrences, weekNum].sort();
+
+            return {
+                ...prev,
+                weekOccurrences: newWeekOccurrences,
             };
         });
     };
@@ -120,6 +136,7 @@ export const Dashboard = () => {
                 startDate: formData.startDate,
                 endDate: formData.endDate || undefined,
                 isRecurring: formData.isRecurring,
+                weekOccurrences: formData.weekOccurrences.length > 0 ? formData.weekOccurrences : undefined,
             };
             await updateSchedule(updatedClass);
         } else {
@@ -134,7 +151,8 @@ export const Dashboard = () => {
                 formData.isRecurring,
                 undefined,
                 formData.startTime,
-                formData.endDate || undefined
+                formData.endDate || undefined,
+                formData.weekOccurrences.length > 0 ? formData.weekOccurrences : undefined
             );
         }
 
@@ -200,6 +218,7 @@ export const Dashboard = () => {
             startDate: cls.startDate,
             endDate: cls.endDate || '',
             isRecurring: cls.isRecurring !== false,
+            weekOccurrences: cls.weekOccurrences || [],
         });
         setShowQuickAdd(true);
     };
@@ -295,6 +314,7 @@ export const Dashboard = () => {
                 startDate: scope === 'future' ? new Date().toISOString().split('T')[0] : cls.startDate,
                 endDate: cls.endDate || '',
                 isRecurring: cls.isRecurring !== false,
+                weekOccurrences: cls.weekOccurrences || [],
             });
             setShowQuickAdd(true);
         }
@@ -309,13 +329,19 @@ export const Dashboard = () => {
         return cls.startTime || '09:00';
     };
 
-    const getActivityStatus = (className: string, date: Date): 'attended' | 'missed' | null => {
+    const getActivityStatus = (className: string, date: Date): 'attended' | 'missed' | 'cancelled' | null => {
         const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         const loggedActivity = activities.find(act =>
             act.name === className &&
             act.timestamp.startsWith(dateString)
         );
         return loggedActivity?.status || null;
+    };
+
+    // Helper to calculate which week of the month a date falls on (1-5)
+    const getWeekOfMonth = (date: Date): number => {
+        const dayOfMonth = date.getDate();
+        return Math.ceil(dayOfMonth / 7);
     };
 
     const getClassesForDate = (date: Date) => {
@@ -341,7 +367,15 @@ export const Dashboard = () => {
                     end = new Date(endYear, endMonth - 1, endDay);
                 }
 
-                return normalizedDate >= start && (!end || normalizedDate <= end);
+                const inDateRange = normalizedDate >= start && (!end || normalizedDate <= end);
+
+                // If weekOccurrences is specified, also check if this date falls on the right week
+                if (inDateRange && cls.weekOccurrences && cls.weekOccurrences.length > 0) {
+                    const weekOfMonth = getWeekOfMonth(date);
+                    return cls.weekOccurrences.includes(weekOfMonth);
+                }
+
+                return inDateRange;
             }
             return false;
         }).sort((a, b) => {
@@ -564,7 +598,7 @@ export const Dashboard = () => {
                                         </div>
                                     </div>
 
-                                    {/* Classes List */}
+                                    {/* Activities List */}
                                     {classes.length > 0 ? (
                                         <div className="space-y-3">
                                             {classes.map(cls => {
@@ -625,28 +659,33 @@ export const Dashboard = () => {
 
                                                         {/* Action Buttons - Always Visible in vertical layout */}
                                                         <div className="grid grid-cols-2 gap-2">
-                                                            {isPast ? (
+                                                            {/* Only show logging buttons for past dates and today */}
+                                                            {(isPast || isToday) && (
                                                                 <>
-                                                                    <button
-                                                                        onClick={() => handleLogActivity(cls, date, 'missed')}
-                                                                        className="col-span-2 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                                    >
-                                                                        ⚠ Log Missed
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleLogActivity(cls, date, 'attended')}
-                                                                        className="py-2.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                                    >
-                                                                        ✓ Attended
-                                                                    </button>
+                                                                    {isPast ? (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => handleLogActivity(cls, date, 'missed')}
+                                                                                className="col-span-2 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                            >
+                                                                                ⚠ Log Missed
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleLogActivity(cls, date, 'attended')}
+                                                                                className="py-2.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                            >
+                                                                                ✓ Attended
+                                                                            </button>
+                                                                        </>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => handleLogActivity(cls, date, 'attended')}
+                                                                            className="col-span-2 py-2.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                        >
+                                                                            ✓ Log It
+                                                                        </button>
+                                                                    )}
                                                                 </>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => handleLogActivity(cls, date, 'attended')}
-                                                                    className="col-span-2 py-2.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                                >
-                                                                    ✓ Log It
-                                                                </button>
                                                             )}
                                                             <button
                                                                 onClick={() => handleOpenEdit(cls, date.getDay())}
@@ -833,28 +872,33 @@ export const Dashboard = () => {
 
                                                     {/* Quick Actions */}
                                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
-                                                        {selectedMonthDate && selectedMonthDate < new Date(new Date().setHours(0, 0, 0, 0)) ? (
+                                                        {/* Only show logging buttons for past dates and today */}
+                                                        {selectedMonthDate && (selectedMonthDate < new Date(new Date().setHours(0, 0, 0, 0)) || selectedMonthDate.toDateString() === new Date().toDateString()) && (
                                                             <>
-                                                                <button
-                                                                    onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'missed')}
-                                                                    className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                                >
-                                                                    ⚠ Log Missed
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'attended')}
-                                                                    className="w-full py-2 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                                >
-                                                                    ✓ Attended
-                                                                </button>
+                                                                {selectedMonthDate < new Date(new Date().setHours(0, 0, 0, 0)) ? (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'missed')}
+                                                                            className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                        >
+                                                                            ⚠ Log Missed
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'attended')}
+                                                                            className="w-full py-2 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                        >
+                                                                            ✓ Attended
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'attended')}
+                                                                        className="w-full py-2 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                    >
+                                                                        ✓ Log It
+                                                                    </button>
+                                                                )}
                                                             </>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'attended')}
-                                                                className="w-full py-2 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                            >
-                                                                ✓ Log It
-                                                            </button>
                                                         )}
                                                         <div className="flex gap-2">
                                                             <button
@@ -1191,30 +1235,67 @@ export const Dashboard = () => {
 
                             {/* Multi-day selector (only for recurring) */}
                             {formData.isRecurring && (
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase tracking-wider text-slate-400 ml-1 block">
-                                        Days of Week
-                                    </label>
-                                    <div className="grid grid-cols-7 gap-1">
-                                        {DAYS_MON_FIRST.map(day => {
-                                            const isSelected = formData.selectedDays.includes(day.index);
-                                            return (
-                                                <button
-                                                    key={day.index}
-                                                    type="button"
-                                                    onClick={() => toggleDaySelection(day.index)}
-                                                    className={`py-2 rounded-lg border-2 transition-all ${
-                                                        isSelected
-                                                            ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
-                                                            : 'border-slate-200 bg-white text-slate-600'
-                                                    }`}
-                                                >
-                                                    <div className="text-[9px] font-black">{day.short}</div>
-                                                </button>
-                                            );
-                                        })}
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-wider text-slate-400 ml-1 block">
+                                            Days of Week
+                                        </label>
+                                        <div className="grid grid-cols-7 gap-1">
+                                            {DAYS_MON_FIRST.map(day => {
+                                                const isSelected = formData.selectedDays.includes(day.index);
+                                                return (
+                                                    <button
+                                                        key={day.index}
+                                                        type="button"
+                                                        onClick={() => toggleDaySelection(day.index)}
+                                                        className={`py-2 rounded-lg border-2 transition-all ${
+                                                            isSelected
+                                                                ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
+                                                                : 'border-slate-200 bg-white text-slate-600'
+                                                        }`}
+                                                    >
+                                                        <div className="text-[9px] font-black">{day.short}</div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
+
+                                    {/* Week Occurrence Selector */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black uppercase tracking-wider text-slate-400 ml-1 block">
+                                            Weeks of Month (Optional)
+                                        </label>
+                                        <p className="text-[10px] text-slate-500 ml-1 mb-2">
+                                            Leave empty for every week, or select specific weeks (e.g., 1st & 3rd for twice monthly)
+                                        </p>
+                                        <div className="grid grid-cols-5 gap-2">
+                                            {[
+                                                { num: 1, label: '1st' },
+                                                { num: 2, label: '2nd' },
+                                                { num: 3, label: '3rd' },
+                                                { num: 4, label: '4th' },
+                                                { num: 5, label: '5th' }
+                                            ].map(week => {
+                                                const isSelected = formData.weekOccurrences.includes(week.num);
+                                                return (
+                                                    <button
+                                                        key={week.num}
+                                                        type="button"
+                                                        onClick={() => toggleWeekOccurrence(week.num)}
+                                                        className={`py-2 px-1 rounded-lg border-2 transition-all ${
+                                                            isSelected
+                                                                ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
+                                                                : 'border-slate-200 bg-white text-slate-600'
+                                                        }`}
+                                                    >
+                                                        <div className="text-[10px] font-black">{week.label}</div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
                             )}
 
                             {/* Date Fields */}

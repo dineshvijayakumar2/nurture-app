@@ -52,6 +52,9 @@ export interface ScheduledClass {
   startDate: string; // ISO Date String (YYYY-MM-DD)
   endDate?: string; // ISO Date String (YYYY-MM-DD) or null for ongoing
   status: 'active' | 'paused' | 'discontinued';
+
+  // Flexible Scheduling: Specify which weeks of the month (e.g., [1, 3] for 1st and 3rd week)
+  weekOccurrences?: number[]; // 1-5 (1st week, 2nd week, 3rd week, 4th week, 5th/last week)
 }
 
 export interface ParentProfile {

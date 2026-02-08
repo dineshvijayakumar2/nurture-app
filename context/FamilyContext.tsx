@@ -52,7 +52,7 @@ interface FamilyContextType {
     joinFamily: (fid: string) => Promise<void>;
     addLog: (content: string, image?: string | null, isPrivate?: boolean) => Promise<LogEntry | undefined>;
     addActivity: (name: string, category: ActivityCategory, duration: number, cost: number, mood: Mood, date: string, photo?: string | null, status?: 'attended' | 'missed' | 'cancelled') => Promise<void>;
-    addSchedule: (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring?: boolean, specificDates?: string[], startTime?: string, endDate?: string) => Promise<void>;
+    addSchedule: (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring?: boolean, specificDates?: string[], startTime?: string, endDate?: string, weekOccurrences?: number[]) => Promise<void>;
     updateSchedule: (cls: ScheduledClass) => Promise<void>;
     deleteSchedule: (id: string) => Promise<void>;
     moveClass: (id: string, newDay: number) => Promise<void>;
@@ -332,7 +332,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         } catch (error) { console.error(error); } finally { setIsLoading(false); }
     };
 
-    const addSchedule = async (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring: boolean = true, specificDates?: string[], startTime: string = "09:00", endDate?: string) => {
+    const addSchedule = async (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring: boolean = true, specificDates?: string[], startTime: string = "09:00", endDate?: string, weekOccurrences?: number[]) => {
         if (!familyId || !child) return;
         setIsLoading(true);
         try {
@@ -349,7 +349,8 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 cost,
                 startDate: startDate || (specificDates?.[0]) || new Date().toISOString().split('T')[0],
                 endDate: endDate || undefined,
-                status: 'active'
+                status: 'active',
+                weekOccurrences: weekOccurrences && weekOccurrences.length > 0 ? weekOccurrences : undefined
             };
             await saveScheduledClass(familyId, newClass);
             setScheduledClasses(prev => [...prev, newClass]);
