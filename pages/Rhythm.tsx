@@ -3,7 +3,7 @@ import { useFamily } from '../context/FamilyContext';
 import { ICONS } from '../constants';
 
 export const Rhythm = () => {
-    const { child, activities, generateReading, isLoading } = useFamily();
+    const { child, activities } = useFamily();
     const [expandedClass, setExpandedClass] = useState<string | null>(null);
 
     // Calculate attendance statistics
@@ -71,18 +71,6 @@ export const Rhythm = () => {
                         <div className="text-4xl font-black text-slate-900">{attendanceStats.averageHoursPerWeek.toFixed(1)}h</div>
                         <div className="text-xs text-slate-500 mt-2">Average hours</div>
                     </div>
-                </div>
-
-                {/* AI Insights Button */}
-                <div className="flex justify-end">
-                    <button
-                        onClick={generateReading}
-                        disabled={isLoading}
-                        className="px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-                    >
-                        <ICONS.Sparkles className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                        {isLoading ? 'Analyzing...' : 'Generate AI Insights'}
-                    </button>
                 </div>
 
                 {/* Attendance by Class */}

@@ -93,61 +93,43 @@ export const generateNeuralReading = async (
   const ai = aiClient();
   const kb = formatKnowledgeBase(knowledge);
 
-  const dietInfo = child.dietaryPreferences
-    ? `DIET: ${child.dietaryPreferences.type}, ALLERGIES: ${child.dietaryPreferences.allergies.join(', ')} `
-    : "DIET: Standard";
-
-  const activitySummary = logs
-    .filter(l => l.extracted.activityData)
-    .map(l => `${l.extracted.activityData?.name}: ${l.extracted.activityData?.durationHours} hrs`)
-    .join('; ');
+  const recentLogs = logs.slice(0, 10).map(l => ({
+    content: l.content,
+    mood: l.extracted?.moodLabels || [],
+    activities: l.extracted?.activities || [],
+    domains: l.extracted?.domains || []
+  }));
 
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
-    contents: `HISTORY: ${JSON.stringify(logs)} \nACTIVITY: ${activitySummary} \n${dietInfo} \n${kb} `,
+    contents: `CHILD: ${child.name} (Age: ${child.age}, Temperament: ${child.temperament})
+RECENT OBSERVATIONS: ${JSON.stringify(recentLogs)}
+
+${kb}`,
     config: {
-      systemInstruction: `You are Nurture, a child development and nutrition expert powered by Google Gemini.
-      Analyze ${child.name}'s week (age ${child.age}).
-      1. Growth Architecture: Define the developmental phase.
-      2. Neural Reading: The developmental story.
-      3. Milestone Detection: Identify any age-appropriate milestones ACTUALLY demonstrated in the logs (detected), and predict what milestones are coming in the next 3-6 months (upcoming). Flag if development seems age-appropriate.
-      4. Activity Recommendations: Suggest 2-3 specific NEW activities that would benefit ${child.name}'s development based on observed patterns and gaps. Include category, reason for recommendation, and specific developmental benefit.
-      5. Nutrition Advice: Provide 3 specific food recommendations tailored to their activity level (e.g., higher carb/protein for sports weeks) and dietary constraints. Avoid allergens.
-      6. Science: The 'why' behind the growth.
-      Format in JSON.`,
+      systemInstruction: `You are a thoughtful companion helping parents see the beautiful patterns in their child's development.
+
+Think alongside the parent about ${child.name} (age ${child.age}). You're not an expert telling them what to do - you're a warm voice helping them notice what's already there.
+
+CRITICAL: If the family has shared their parenting wisdom (books, philosophies, approaches in the knowledge base), weave those ideas naturally into your reflections. Help them see how their values show up in ${child.name}'s daily moments.
+
+Share your observations in this format:
+1. Growth Architecture: A poetic name for this developmental phase (2-3 words, e.g., "The Curious Connector")
+2. Current Reading: What patterns do you notice? Connect the dots between their observations and any wisdom they've shared. Write as if you're thinking out loud with a close friend. (2-3 warm, insightful sentences)
+3. Forecast: What beautiful shifts might be on the horizon? (1-2 sentences)
+4. Science Background: Ground your observations in development science, but keep it conversational. (2-3 sentences)
+
+Tone: Warm, observant, never prescriptive. Use "I'm noticing..." instead of "You should..." Format in JSON.`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
         properties: {
           architecture: { type: Type.STRING },
           currentReading: { type: Type.STRING },
-          scienceBackground: { type: Type.STRING },
           forecast: { type: Type.STRING },
-          milestoneWindow: { type: Type.STRING },
-          citations: { type: Type.ARRAY, items: { type: Type.STRING } },
-          activityTrends: { type: Type.STRING },
-          nutritionAdvice: { type: Type.STRING },
-          milestones: {
-            type: Type.OBJECT,
-            properties: {
-              detected: { type: Type.ARRAY, items: { type: Type.STRING } },
-              upcoming: { type: Type.ARRAY, items: { type: Type.STRING } },
-              ageAppropriate: { type: Type.BOOLEAN }
-            }
-          },
-          activityRecommendations: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                category: { type: Type.STRING },
-                reason: { type: Type.STRING },
-                developmentalBenefit: { type: Type.STRING }
-              }
-            }
-          }
-        }
+          scienceBackground: { type: Type.STRING }
+        },
+        required: ["architecture", "currentReading", "scienceBackground"]
       }
     }
   });
@@ -183,14 +165,29 @@ export const generateChatResponse = async (
 
 export const generateValueDialogue = async (value: Value, child: ChildProfile, logs: LogEntry[], knowledge: KnowledgeSource[] = []): Promise<ValueDialogue> => {
   const ai = aiClient();
+  const kb = formatKnowledgeBase(knowledge);
   const recentLogs = logs.slice(0, 5).map(l => l.content).join('\n');
+
   const response = await ai.models.generateContent({
     model: "gemini-3-pro-preview",
-    contents: `Value: ${value}.\nChild: ${child.name} (Age: ${child.age})\nRECENT MOMENTS:\n${recentLogs}`,
+    contents: `Value: ${value}
+Child: ${child.name} (Age: ${child.age})
+RECENT MOMENTS:
+${recentLogs}
+
+${kb}`,
     config: {
-      systemInstruction: `Generate a value dialogue guide in JSON. 
-      CRITICAL: Use the 'RECENT MOMENTS' to create 'conversationStarters' that connect the value to actual things that happened recently. 
-      For example, if the child helped a friend, and the value is Kindness, start with "I loved how you helped..."`,
+      systemInstruction: `You're helping a parent explore the value of "${value}" with ${child.name}.
+
+IMPORTANT: If the family has shared parenting wisdom or philosophies in their knowledge base, draw from those approaches. Help them teach this value in a way that aligns with their parenting style.
+
+Generate a warm, practical value dialogue guide:
+- Connect the value to ACTUAL recent moments from their observations
+- If they follow specific parenting philosophies (from knowledge base), incorporate those principles
+- Keep conversation starters natural and specific to what really happened
+- Make teaching moments practical and age-appropriate
+
+Format in JSON.`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
