@@ -25,8 +25,8 @@ export const Layout = ({
     { id: 'home', icon: ICONS.Home, label: 'Home' },
     { id: 'journal', icon: ICONS.Log, label: 'Journal' },
     { id: 'activities', icon: ICONS.Timeline, label: 'Activities' },
-    { id: 'coach', icon: ICONS.Sparkles, label: 'Coach' },
-    { id: 'wisdom', icon: ICONS.Values, label: 'Research' },
+    { id: 'coach', icon: ICONS.Sparkles, label: 'Companion' },
+    { id: 'values', icon: ICONS.Values, label: 'Values' },
   ];
 
   const getActiveIndex = () => {

@@ -40,7 +40,7 @@ const AppContent = () => {
           <Route path="/journal" element={<Journal />} />
           <Route path="/activities" element={<Rhythm />} />
           <Route path="/coach" element={<Coach />} />
-          <Route path="/wisdom" element={<ValueGarden />} />
+          <Route path="/values" element={<ValueGarden />} />
         </Routes>
       </div>
 

@@ -3,51 +3,60 @@ import { useFamily } from '../context/FamilyContext';
 import { ICONS } from '../constants';
 import { ScheduledClass } from '../types';
 
-type StatsPeriod = '7days' | '30days' | '3months' | '6months' | '1year' | 'all';
+type StatsPeriod = 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear' | 'all';
 
 export const Rhythm = () => {
     const { child, activities, scheduledClasses, updateSchedule, deleteSchedule } = useFamily();
     const [expandedClass, setExpandedClass] = useState<string | null>(null);
-    const [selectedPeriod, setSelectedPeriod] = useState<StatsPeriod>('30days');
+    const [selectedPeriod, setSelectedPeriod] = useState<StatsPeriod>('thisMonth');
 
     // Calculate attendance statistics
     const attendanceStats = useMemo(() => {
-        // Get date range based on selected period
+        // Get date range based on selected calendar period
         const now = new Date();
         let startDate: Date | null = null;
+        let endDate: Date | null = null;
 
         switch (selectedPeriod) {
-            case '7days':
-                startDate = new Date(now);
-                startDate.setDate(now.getDate() - 7);
+            case 'thisMonth':
+                // First day of current month
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                // Last day of current month
+                endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
                 break;
-            case '30days':
-                startDate = new Date(now);
-                startDate.setDate(now.getDate() - 30);
+            case 'lastMonth':
+                // First day of last month
+                startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                // Last day of last month
+                endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
                 break;
-            case '3months':
-                startDate = new Date(now);
-                startDate.setMonth(now.getMonth() - 3);
+            case 'thisYear':
+                // January 1st of current year
+                startDate = new Date(now.getFullYear(), 0, 1);
+                // December 31st of current year
+                endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
                 break;
-            case '6months':
-                startDate = new Date(now);
-                startDate.setMonth(now.getMonth() - 6);
-                break;
-            case '1year':
-                startDate = new Date(now);
-                startDate.setFullYear(now.getFullYear() - 1);
+            case 'lastYear':
+                // January 1st of last year
+                startDate = new Date(now.getFullYear() - 1, 0, 1);
+                // December 31st of last year
+                endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
                 break;
             case 'all':
             default:
                 startDate = null; // No filter
+                endDate = null;
                 break;
         }
 
-        // Filter activities by period and exclude missed/cancelled
+        // Filter activities by calendar period and exclude missed/cancelled
         let filteredActivities = activities.filter(act => act.status !== 'missed' && act.status !== 'cancelled');
 
-        if (startDate) {
-            filteredActivities = filteredActivities.filter(act => new Date(act.timestamp) >= startDate!);
+        if (startDate && endDate) {
+            filteredActivities = filteredActivities.filter(act => {
+                const actDate = new Date(act.timestamp);
+                return actDate >= startDate! && actDate <= endDate!;
+            });
         }
 
         const attendedActivities = filteredActivities;
@@ -79,11 +88,10 @@ export const Rhythm = () => {
             byClassName,
             recentActivities,
             averageHoursPerWeek: totalHours / Math.max(1, Math.ceil(totalClasses / 7)),
-            periodLabel: selectedPeriod === '7days' ? 'Last 7 Days' :
-                        selectedPeriod === '30days' ? 'Last 30 Days' :
-                        selectedPeriod === '3months' ? 'Last 3 Months' :
-                        selectedPeriod === '6months' ? 'Last 6 Months' :
-                        selectedPeriod === '1year' ? 'Last Year' : 'All Time'
+            periodLabel: selectedPeriod === 'thisMonth' ? `This Month (${now.toLocaleString('default', { month: 'long', year: 'numeric' })})` :
+                        selectedPeriod === 'lastMonth' ? `Last Month (${new Date(now.getFullYear(), now.getMonth() - 1).toLocaleString('default', { month: 'long', year: 'numeric' })})` :
+                        selectedPeriod === 'thisYear' ? `This Year (${now.getFullYear()})` :
+                        selectedPeriod === 'lastYear' ? `Last Year (${now.getFullYear() - 1})` : 'All Time'
         };
     }, [activities, selectedPeriod]);
 
@@ -107,11 +115,10 @@ export const Rhythm = () => {
                             onChange={(e) => setSelectedPeriod(e.target.value as StatsPeriod)}
                             className="px-4 py-2 rounded-xl bg-white border-2 border-slate-200 text-sm font-bold text-slate-700 focus:border-[#A8C5A8] outline-none"
                         >
-                            <option value="7days">Last 7 Days</option>
-                            <option value="30days">Last 30 Days</option>
-                            <option value="3months">Last 3 Months</option>
-                            <option value="6months">Last 6 Months</option>
-                            <option value="1year">Last Year</option>
+                            <option value="thisMonth">This Month</option>
+                            <option value="lastMonth">Last Month</option>
+                            <option value="thisYear">This Year</option>
+                            <option value="lastYear">Last Year</option>
                             <option value="all">All Time</option>
                         </select>
                     </div>
@@ -267,7 +274,44 @@ export const Rhythm = () => {
                     <div className="space-y-3">
                         {Object.entries(attendanceStats.byClassName).map(([className, data]) => {
                             const isExpanded = expandedClass === className;
-                            const classActivities = activities.filter(act => act.name === className);
+
+                            // Filter activities by the selected period
+                            const now = new Date();
+                            let startDate: Date | null = null;
+                            let endDate: Date | null = null;
+
+                            switch (selectedPeriod) {
+                                case 'thisMonth':
+                                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                                    break;
+                                case 'lastMonth':
+                                    startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                    endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+                                    break;
+                                case 'thisYear':
+                                    startDate = new Date(now.getFullYear(), 0, 1);
+                                    endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+                                    break;
+                                case 'lastYear':
+                                    startDate = new Date(now.getFullYear() - 1, 0, 1);
+                                    endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+                                    break;
+                                case 'all':
+                                default:
+                                    startDate = null;
+                                    endDate = null;
+                                    break;
+                            }
+
+                            // Filter activities for this class and period
+                            let classActivities = activities.filter(act => act.name === className);
+                            if (startDate && endDate) {
+                                classActivities = classActivities.filter(act => {
+                                    const actDate = new Date(act.timestamp);
+                                    return actDate >= startDate! && actDate <= endDate!;
+                                });
+                            }
 
                             return (
                                 <div key={className} className="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm">

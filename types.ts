@@ -55,6 +55,9 @@ export interface ScheduledClass {
 
   // Flexible Scheduling: Specify which weeks of the month (e.g., [1, 3] for 1st and 3rd week)
   weekOccurrences?: number[]; // 1-5 (1st week, 2nd week, 3rd week, 4th week, 5th/last week)
+
+  // Exception dates: specific dates where this recurring event should NOT appear (overridden by one-time events)
+  exceptionDates?: string[]; // ISO date strings (YYYY-MM-DD) to exclude from recurring schedule
 }
 
 export interface ParentProfile {

@@ -203,3 +203,35 @@ Format in JSON.`,
   });
   return JSON.parse(response.text || "{}") as ValueDialogue;
 };
+
+export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+  const ai = aiClient();
+
+  // Convert blob to base64
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const base64Audio = btoa(
+    new Uint8Array(arrayBuffer).reduce(
+      (data, byte) => data + String.fromCharCode(byte),
+      ''
+    )
+  );
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-pro-preview",
+    contents: {
+      parts: [
+        {
+          inlineData: {
+            mimeType: "audio/webm",
+            data: base64Audio
+          }
+        },
+        {
+          text: "Transcribe this audio recording into text. Return only the transcribed text, nothing else."
+        }
+      ]
+    }
+  });
+
+  return response.text || "";
+};

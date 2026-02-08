@@ -26,6 +26,7 @@ const CATEGORIES: { value: ActivityCategory; label: string; icon: string; color:
 export const Dashboard = () => {
     const {
         child,
+        user,
         scheduledClasses,
         readings,
         generateReading,
@@ -45,6 +46,7 @@ export const Dashboard = () => {
     const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
     const [showEditScopeModal, setShowEditScopeModal] = useState(false);
     const [pendingEditAction, setPendingEditAction] = useState<{ class: ScheduledClass; action: 'edit' | 'delete'; dayIndex?: number } | null>(null);
+    const [originalRecurringClass, setOriginalRecurringClass] = useState<ScheduledClass | null>(null); // Track which recurring event we're overriding
 
     // Form state
     const [formData, setFormData] = useState({
@@ -75,6 +77,7 @@ export const Dashboard = () => {
             weekOccurrences: [],
         });
         setEditingClass(null);
+        setOriginalRecurringClass(null);
     };
 
     const toggleDaySelection = (dayIndex: number) => {
@@ -151,10 +154,23 @@ export const Dashboard = () => {
                 formData.endDate || undefined,
                 formData.weekOccurrences.length > 0 ? formData.weekOccurrences : undefined
             );
+
+            // If this is a one-time event created from a recurring event, add exception to the original
+            if (!formData.isRecurring && originalRecurringClass) {
+                const exceptionDates = originalRecurringClass.exceptionDates || [];
+                if (!exceptionDates.includes(formData.startDate)) {
+                    const updatedOriginal: ScheduledClass = {
+                        ...originalRecurringClass,
+                        exceptionDates: [...exceptionDates, formData.startDate]
+                    };
+                    await updateSchedule(updatedOriginal);
+                }
+            }
         }
 
         setShowQuickAdd(false);
         setQuickAddDay(null);
+        setOriginalRecurringClass(null);
         resetForm();
     };
 
@@ -189,7 +205,14 @@ export const Dashboard = () => {
         if (specificDate !== undefined) {
             // Don't set editingClass - we want to create a NEW one-time event, not update the recurring one
             setEditingClass(null);
-            const dateString = specificDate.toISOString().split('T')[0];
+            // Track the original recurring class so we can add this date to its exceptions
+            setOriginalRecurringClass(cls.isRecurring ? cls : null);
+
+            // Use local date formatting to avoid UTC timezone issues
+            const year = specificDate.getFullYear();
+            const month = String(specificDate.getMonth() + 1).padStart(2, '0');
+            const day = String(specificDate.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
             const dayTime = getTimeForDay(cls, specificDate.getDay());
 
             // Create a one-time event for this specific date (both date and time are editable)
@@ -279,8 +302,12 @@ export const Dashboard = () => {
                     // Delete entire series
                     await deleteSchedule(cls.id);
                 } else {
-                    // For "this" or "future", set end date
-                    const today = new Date().toISOString().split('T')[0];
+                    // For "this" or "future", set end date using local date to avoid timezone issues
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const today = `${year}-${month}-${day}`;
                     const updatedClass = {
                         ...cls,
                         endDate: scope === 'this' ? today : today
@@ -298,6 +325,16 @@ export const Dashboard = () => {
             setEditingClass(cls);
             const days = cls.daysOfWeek || (cls.dayOfWeek !== undefined ? [cls.dayOfWeek] : [0]);
 
+            // Use local date formatting for 'future' scope to avoid timezone issues
+            let startDate = cls.startDate;
+            if (scope === 'future') {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                startDate = `${year}-${month}-${day}`;
+            }
+
             setFormData({
                 name: cls.name,
                 category: cls.category,
@@ -305,7 +342,7 @@ export const Dashboard = () => {
                 selectedDays: days,
                 startTime: cls.startTime || '09:00',
                 duration: cls.durationHours,
-                startDate: scope === 'future' ? new Date().toISOString().split('T')[0] : cls.startDate,
+                startDate: startDate,
                 endDate: cls.endDate || '',
                 isRecurring: cls.isRecurring !== false,
                 weekOccurrences: cls.weekOccurrences || [],
@@ -343,6 +380,12 @@ export const Dashboard = () => {
         // Normalize date to midnight for comparison (avoid timezone issues)
         const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
+        // Create date string for exception checking
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+
         return scheduledClasses.filter(cls => {
             if (cls.status !== 'active') return false;
 
@@ -362,6 +405,11 @@ export const Dashboard = () => {
                 }
 
                 const inDateRange = normalizedDate >= start && (!end || normalizedDate <= end);
+
+                // Skip if this date is in the exception list (overridden by a one-time event)
+                if (inDateRange && cls.exceptionDates && cls.exceptionDates.includes(dateString)) {
+                    return false;
+                }
 
                 // If weekOccurrences is specified, also check if this date falls on the right week
                 if (inDateRange && cls.weekOccurrences && cls.weekOccurrences.length > 0) {
@@ -457,8 +505,13 @@ export const Dashboard = () => {
                         )}
                     </div>
                     <div>
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Hello, Family</h2>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tighter">
+                            Hello, {user?.displayName?.split(' ')[0] || 'there'}
+                        </h2>
+                        <p className="text-sm text-slate-600 font-semibold">
+                            Tracking {child?.name || 'your child'}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-0.5">
                             {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
                         </p>
                     </div>
@@ -931,10 +984,15 @@ export const Dashboard = () => {
                                     <button
                                         onClick={() => {
                                             setQuickAddDay(selectedMonthDate.getDay());
+                                            // Use local date formatting to avoid UTC timezone issues
+                                            const year = selectedMonthDate.getFullYear();
+                                            const month = String(selectedMonthDate.getMonth() + 1).padStart(2, '0');
+                                            const day = String(selectedMonthDate.getDate()).padStart(2, '0');
+                                            const dateString = `${year}-${month}-${day}`;
                                             setFormData(prev => ({
                                                 ...prev,
                                                 day: selectedMonthDate.getDay(),
-                                                startDate: selectedMonthDate.toISOString().split('T')[0]
+                                                startDate: dateString
                                             }));
                                             setShowQuickAdd(true);
                                         }}

@@ -16,7 +16,7 @@ import {
     getChatMessages, saveChatMessage,
     saveParentProfile, getParentProfile, getFamilyParents, deleteParentProfile, clearUserFamilyId
 } from '../services/storageService';
-import { processLogEntry, generateNeuralReading, generateChatResponse, generateValueDialogue, generateActivityIcon } from '../services/geminiService';
+import { processLogEntry, generateNeuralReading, generateChatResponse, generateValueDialogue, generateActivityIcon, transcribeAudio } from '../services/geminiService';
 import { ChildProfile, ParentProfile, LogEntry, NeuralReading, ChatMessage, Value, ValueDialogue, KnowledgeSource, Activity, ScheduledClass, ActivityCategory, Mood } from '../types';
 import { PREDEFINED_ICONS } from '../constants';
 
@@ -64,6 +64,7 @@ interface FamilyContextType {
     getParentName: (authorId: string) => string;
     runMigration: () => Promise<void>;
     wipeData: () => Promise<void>;
+    transcribeAudio: (audioBlob: Blob) => Promise<string>;
 }
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
@@ -507,7 +508,8 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             isDemoMode, isLoading, authLoading,
             loginDemo, setChild, saveChildProfile, saveParentProfileData, removeParentFromFamily, leaveFamily, joinFamily,
             addLog, addActivity, addSchedule, updateSchedule, deleteSchedule, moveClass,
-            generateReading, sendChatMessage, addKnowledge, updateKnowledge, deleteKnowledge, getParentName, runMigration, wipeData
+            generateReading, sendChatMessage, addKnowledge, updateKnowledge, deleteKnowledge, getParentName, runMigration, wipeData,
+            transcribeAudio
         }}>
             {children}
         </FamilyContext.Provider>
