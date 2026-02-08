@@ -51,7 +51,7 @@ interface FamilyContextType {
     leaveFamily: () => Promise<void>;
     joinFamily: (fid: string) => Promise<void>;
     addLog: (content: string, image?: string | null, isPrivate?: boolean) => Promise<LogEntry | undefined>;
-    addActivity: (name: string, category: ActivityCategory, duration: number, cost: number, mood: Mood, date: string, photo?: string | null) => Promise<void>;
+    addActivity: (name: string, category: ActivityCategory, duration: number, cost: number, mood: Mood, date: string, photo?: string | null, status?: 'attended' | 'missed' | 'cancelled') => Promise<void>;
     addSchedule: (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring?: boolean, specificDates?: string[], startTime?: string) => Promise<void>;
     updateSchedule: (cls: ScheduledClass) => Promise<void>;
     deleteSchedule: (id: string) => Promise<void>;
@@ -312,7 +312,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         } catch (error) { console.error(error); return undefined; } finally { setIsLoading(false); }
     };
 
-    const addActivity = async (name: string, category: ActivityCategory, duration: number, cost: number, mood: Mood, date: string, photo?: string | null) => {
+    const addActivity = async (name: string, category: ActivityCategory, duration: number, cost: number, mood: Mood, date: string, photo?: string | null, status: 'attended' | 'missed' | 'cancelled' = 'attended') => {
         if (!familyId || !child) return;
         setIsLoading(true);
         try {
@@ -324,7 +324,8 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 durationHours: duration,
                 cost, mood,
                 iconUrl: child.activityIcons?.[sanitizedName] || '',
-                photoUrl: photo || undefined
+                photoUrl: photo || undefined,
+                status
             };
             await saveActivity(familyId, activity);
             setActivities(p => [activity, ...p]);

@@ -32,6 +32,7 @@ export interface Activity {
   mood?: Mood;
   iconUrl?: string;
   photoUrl?: string;
+  status?: 'attended' | 'missed' | 'cancelled'; // Track attendance status
 }
 
 export interface ScheduledClass {

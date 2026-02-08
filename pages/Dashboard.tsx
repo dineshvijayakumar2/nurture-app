@@ -38,7 +38,7 @@ export const Dashboard = () => {
 
     const [viewMode, setViewMode] = useState<'week' | 'month'>('month');
     const [currentWeek, setCurrentWeek] = useState(new Date());
-    const [selectedMonthDate, setSelectedMonthDate] = useState<Date | null>(null);
+    const [selectedMonthDate, setSelectedMonthDate] = useState<Date | null>(new Date()); // Auto-select today
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [quickAddDay, setQuickAddDay] = useState<number | null>(null);
     const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
@@ -121,7 +121,7 @@ export const Dashboard = () => {
         resetForm();
     };
 
-    const handleLogActivity = async (cls: ScheduledClass, date: Date) => {
+    const handleLogActivity = async (cls: ScheduledClass, date: Date, status: 'attended' | 'missed' = 'attended') => {
         try {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -135,9 +135,12 @@ export const Dashboard = () => {
                 0,
                 'neutral' as const,
                 dateString,
-                null
+                null,
+                status
             );
-            alert(`✅ Logged "${cls.name}" for ${date.toLocaleDateString()}`);
+            const statusEmoji = status === 'missed' ? '⚠️' : '✅';
+            const statusText = status === 'missed' ? 'Logged as missed' : 'Logged';
+            alert(`${statusEmoji} ${statusText} "${cls.name}" for ${date.toLocaleDateString()}`);
         } catch (error) {
             console.error('Failed to log activity:', error);
             alert('Failed to log activity. Please try again.');
@@ -394,39 +397,56 @@ export const Dashboard = () => {
 
                 {/* Week View */}
                 {viewMode === 'week' && (
-                    <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-                        <div className="grid grid-cols-7 gap-2 md:gap-3 min-w-[700px]">
-                            {weekDays.map((date, idx) => {
-                                const classes = getClassesForDate(date);
-                                const isToday = date.toDateString() === new Date().toDateString();
-                                const dayHours = classes.reduce((sum, cls) => sum + cls.durationHours, 0);
+                    <div className="space-y-3">
+                        {weekDays.map((date, idx) => {
+                            const classes = getClassesForDate(date);
+                            const isToday = date.toDateString() === new Date().toDateString();
+                            const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                            const dayHours = classes.reduce((sum, cls) => sum + cls.durationHours, 0);
 
-                                return (
-                                    <div
-                                        key={idx}
-                                        className={`bg-white rounded-2xl border-2 p-3 md:p-4 min-h-[300px] flex flex-col transition-all ${
-                                            isToday
-                                                ? 'border-[#A8C5A8] shadow-md shadow-[#A8C5A8]/20'
-                                                : 'border-slate-100'
-                                        }`}
-                                    >
-                                        {/* Day Header */}
-                                        <div className="mb-3 pb-3 border-b border-slate-100">
-                                            <div className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-0.5">
-                                                {DAYS_SHORT_MON_FIRST[idx]}
-                                            </div>
-                                            <div className={`text-xl font-black ${isToday ? 'text-[#A8C5A8]' : 'text-slate-900'}`}>
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`bg-white rounded-2xl border-2 p-4 md:p-5 transition-all ${
+                                        isToday
+                                            ? 'border-[#A8C5A8] shadow-md shadow-[#A8C5A8]/20'
+                                            : 'border-slate-100'
+                                    }`}
+                                >
+                                    {/* Day Header - Horizontal */}
+                                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`text-3xl font-black ${isToday ? 'text-[#A8C5A8]' : 'text-slate-900'}`}>
                                                 {date.getDate()}
                                             </div>
+                                            <div>
+                                                <div className={`text-sm font-black uppercase tracking-wider ${isToday ? 'text-[#A8C5A8]' : 'text-slate-400'}`}>
+                                                    {DAYS[date.getDay()]}
+                                                </div>
+                                                <div className="text-xs text-slate-500 font-medium">
+                                                    {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
                                             {dayHours > 0 && (
-                                                <div className="text-[9px] font-bold text-slate-400 mt-1">
-                                                    {dayHours}h
+                                                <div className="text-right">
+                                                    <div className="text-xs text-slate-400 font-bold uppercase">Total</div>
+                                                    <div className="text-xl font-black text-[#A8C5A8]">{dayHours}h</div>
                                                 </div>
                                             )}
+                                            <button
+                                                onClick={() => handleQuickAdd(date.getDay())}
+                                                className="w-10 h-10 rounded-xl bg-[#A8C5A8] text-white flex items-center justify-center hover:bg-[#8ba78b] transition-all shadow-sm"
+                                            >
+                                                <ICONS.Plus className="w-5 h-5" />
+                                            </button>
                                         </div>
+                                    </div>
 
-                                        {/* Classes */}
-                                        <div className="flex-1 space-y-2 overflow-y-auto">
+                                    {/* Classes List */}
+                                    {classes.length > 0 ? (
+                                        <div className="space-y-3">
                                             {classes.map(cls => {
                                                 const iconKey = cls.name.toLowerCase().replace(/\s+/g, '_');
                                                 const hasCustomIcon = child?.activityIcons?.[iconKey];
@@ -435,15 +455,15 @@ export const Dashboard = () => {
                                                 return (
                                                     <div
                                                         key={cls.id}
-                                                        className="bg-slate-50 rounded-xl p-3 group relative"
+                                                        className="bg-slate-50 rounded-xl p-4 group hover:bg-slate-100 transition-colors"
                                                     >
-                                                        <div className="flex items-start gap-2 mb-2">
-                                                            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-base border border-slate-100 flex-shrink-0">
+                                                        <div className="flex items-start gap-3 mb-3">
+                                                            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-xl border border-slate-100 flex-shrink-0">
                                                                 {hasCustomIcon ? (
                                                                     <img
                                                                         src={child.activityIcons[iconKey]}
                                                                         alt={cls.name}
-                                                                        className="w-5 h-5 object-contain"
+                                                                        className="w-7 h-7 object-contain"
                                                                         onError={(e) => {
                                                                             e.currentTarget.style.display = 'none';
                                                                             e.currentTarget.parentElement!.textContent = PREDEFINED_ICONS[cls.category] || '🌟';
@@ -454,10 +474,10 @@ export const Dashboard = () => {
                                                                 )}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <h4 className="font-bold text-xs text-slate-900 leading-tight truncate">
+                                                                <h4 className="font-bold text-base text-slate-900 leading-tight">
                                                                     {cls.name}
                                                                 </h4>
-                                                                <div className="flex items-center gap-1 text-[9px] font-bold mt-1">
+                                                                <div className="flex items-center gap-2 text-xs font-bold mt-1.5">
                                                                     <span className="text-slate-500">{dayTime}</span>
                                                                     <span className="text-slate-300">•</span>
                                                                     <span className="text-[#A8C5A8]">{cls.durationHours}h</span>
@@ -465,61 +485,63 @@ export const Dashboard = () => {
                                                             </div>
                                                         </div>
 
-                                                        {/* Quick Actions */}
-                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
-                                                            {date < new Date(new Date().setHours(0, 0, 0, 0)) ? (
-                                                                <button
-                                                                    onClick={() => handleLogActivity(cls, date)}
-                                                                    className="w-full py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[8px] font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                                >
-                                                                    ⚠ Log Missed
-                                                                </button>
+                                                        {/* Action Buttons - Always Visible in vertical layout */}
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {isPast ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleLogActivity(cls, date, 'missed')}
+                                                                        className="col-span-2 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                    >
+                                                                        ⚠ Log Missed
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleLogActivity(cls, date, 'attended')}
+                                                                        className="py-2.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                    >
+                                                                        ✓ Attended
+                                                                    </button>
+                                                                </>
                                                             ) : (
                                                                 <button
-                                                                    onClick={() => handleLogActivity(cls, date)}
-                                                                    className="w-full py-1.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[8px] font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                    onClick={() => handleLogActivity(cls, date, 'attended')}
+                                                                    className="col-span-2 py-2.5 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-xl text-xs font-black uppercase tracking-wider hover:shadow-md transition-all"
                                                                 >
                                                                     ✓ Log It
                                                                 </button>
                                                             )}
-                                                            <div className="flex gap-1">
-                                                                <button
-                                                                    onClick={() => handleOpenEdit(cls, date.getDay())}
-                                                                    className="flex-1 py-1.5 bg-white rounded-lg text-[8px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100 transition-colors"
-                                                                >
-                                                                    Edit Time
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleOpenEdit(cls)}
-                                                                    className="flex-1 py-1.5 bg-blue-50 rounded-lg text-[8px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDelete(cls.id)}
-                                                                    className="flex-1 py-1.5 bg-red-50 rounded-lg text-[8px] font-black uppercase tracking-wider text-red-600 hover:bg-red-100 transition-colors"
-                                                                >
-                                                                    Remove
-                                                                </button>
-                                                            </div>
+                                                            <button
+                                                                onClick={() => handleOpenEdit(cls, date.getDay())}
+                                                                className="py-2.5 bg-white rounded-xl text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200"
+                                                            >
+                                                                Edit Time
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleOpenEdit(cls)}
+                                                                className="py-2.5 bg-blue-50 rounded-xl text-xs font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(cls.id)}
+                                                                className="py-2.5 bg-red-50 rounded-xl text-xs font-black uppercase tracking-wider text-red-600 hover:bg-red-100 transition-colors"
+                                                            >
+                                                                Remove
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 );
                                             })}
-
-                                            {/* Quick Add Button */}
-                                            <button
-                                                onClick={() => handleQuickAdd(date.getDay())}
-                                                className="w-full py-3 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:border-[#A8C5A8] hover:text-[#A8C5A8] hover:bg-[#A8C5A8]/5 transition-all group"
-                                            >
-                                                <ICONS.Plus className="w-4 h-4 mx-auto opacity-50 group-hover:opacity-100" />
-                                                <span className="text-[9px] font-bold mt-1 block">Add</span>
-                                            </button>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-slate-400">
+                                            <div className="text-3xl mb-2">📅</div>
+                                            <p className="text-xs font-medium">No activities scheduled</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
@@ -656,15 +678,23 @@ export const Dashboard = () => {
                                                     {/* Quick Actions */}
                                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2">
                                                         {selectedMonthDate && selectedMonthDate < new Date(new Date().setHours(0, 0, 0, 0)) ? (
-                                                            <button
-                                                                onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate)}
-                                                                className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
-                                                            >
-                                                                ⚠ Log Missed
-                                                            </button>
+                                                            <>
+                                                                <button
+                                                                    onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'missed')}
+                                                                    className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                >
+                                                                    ⚠ Log Missed
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'attended')}
+                                                                    className="w-full py-2 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
+                                                                >
+                                                                    ✓ Attended
+                                                                </button>
+                                                            </>
                                                         ) : (
                                                             <button
-                                                                onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate)}
+                                                                onClick={() => selectedMonthDate && handleLogActivity(cls, selectedMonthDate, 'attended')}
                                                                 className="w-full py-2 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-lg text-[9px] font-black uppercase tracking-wider hover:shadow-md transition-all"
                                                             >
                                                                 ✓ Log It

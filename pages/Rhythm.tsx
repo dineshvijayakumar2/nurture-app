@@ -8,12 +8,15 @@ export const Rhythm = () => {
 
     // Calculate attendance statistics
     const attendanceStats = useMemo(() => {
-        const totalHours = activities.reduce((sum, act) => sum + act.durationHours, 0);
-        const totalClasses = activities.length;
+        // Filter out missed/cancelled activities from stats
+        const attendedActivities = activities.filter(act => act.status !== 'missed' && act.status !== 'cancelled');
 
-        // Group activities by class name
+        const totalHours = attendedActivities.reduce((sum, act) => sum + act.durationHours, 0);
+        const totalClasses = attendedActivities.length;
+
+        // Group activities by class name (excluding missed/cancelled)
         const byClassName: Record<string, { count: number; hours: number; dates: string[] }> = {};
-        activities.forEach(act => {
+        attendedActivities.forEach(act => {
             if (!byClassName[act.name]) {
                 byClassName[act.name] = { count: 0, hours: 0, dates: [] };
             }
@@ -22,10 +25,10 @@ export const Rhythm = () => {
             byClassName[act.name].dates.push(act.timestamp);
         });
 
-        // Get recent activities (last 30 days)
+        // Get recent activities (last 30 days, excluding missed/cancelled)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const recentActivities = activities.filter(act =>
+        const recentActivities = attendedActivities.filter(act =>
             new Date(act.timestamp) >= thirtyDaysAgo
         );
 
@@ -124,6 +127,7 @@ export const Rhythm = () => {
                                         <div className="border-t border-slate-100 p-4 bg-slate-50">
                                             <div className="space-y-2">
                                                 {classActivities
+                                                    .filter(act => act.status !== 'missed' && act.status !== 'cancelled')
                                                     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                                                     .map((activity) => (
                                                         <div key={activity.id} className="flex items-center justify-between p-3 bg-white rounded-2xl">
