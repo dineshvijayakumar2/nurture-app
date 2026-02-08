@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert Logo to PNG</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #f0f0f0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .logo-canvas {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        #logoCanvas {
+            display: block;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .download-btn {
+            background: #A8C5A8;
+            color: white;
+        }
+
+        .download-btn:hover {
+            background: #8ba78b;
+            transform: scale(1.05);
+        }
+
+        .size-btn {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .size-btn:hover {
+            background: #d0d0d0;
+        }
+
+        .size-btn.active {
+            background: #6B9AC4;
+            color: white;
+        }
+
+        .instructions {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 600px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #1e293b;
+        }
+
+        .instructions ol {
+            line-height: 1.8;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: #1e293b;">Nurture Logo → PNG Converter</h1>
+
+    <div class="controls">
+        <button class="size-btn active" onclick="setSize(512)">512x512</button>
+        <button class="size-btn" onclick="setSize(1024)">1024x1024</button>
+        <button class="size-btn" onclick="setSize(2048)">2048x2048</button>
+        <button class="size-btn" onclick="setSize(4096)">4096x4096</button>
+    </div>
+
+    <div class="logo-canvas">
+        <canvas id="logoCanvas" width="1024" height="1024"></canvas>
+    </div>
+
+    <button class="download-btn" onclick="downloadPNG()">⬇️ Download PNG</button>
+
+    <div class="instructions">
+        <h3>📝 Instructions</h3>
+        <ol>
+            <li>Select your desired size (higher = better quality for presentations)</li>
+            <li>The logo will render on the canvas above</li>
+            <li>Click "Download PNG" to save the file</li>
+            <li>Use the PNG in your presentation slides!</li>
+        </ol>
+        <p style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+            <strong>Recommended:</strong> Use 1024x1024 or 2048x2048 for presentations
+        </p>
+    </div>
+
+    <script>
+        let currentSize = 1024;
+
+        function drawLogo(size) {
+            const canvas = document.getElementById('logoCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas size
+            canvas.width = size;
+            canvas.height = size;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+
+            // Scale factor
+            const scale = size / 1024;
+
+            // Save context
+            ctx.save();
+
+            // Draw shadow (simplified)
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+            ctx.shadowBlur = 40 * scale;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 20 * scale;
+
+            // Translate to center
+            ctx.translate(size / 2, size / 2);
+
+            // Rotate 3 degrees
+            ctx.rotate((3 * Math.PI) / 180);
+
+            // Draw rounded rectangle
+            const rectSize = 820 * scale;
+            const rectRadius = 200 * scale;
+            const x = -rectSize / 2;
+            const y = -rectSize / 2;
+
+            ctx.fillStyle = '#A8C5A8';
+            ctx.beginPath();
+            ctx.moveTo(x + rectRadius, y);
+            ctx.lineTo(x + rectSize - rectRadius, y);
+            ctx.arcTo(x + rectSize, y, x + rectSize, y + rectRadius, rectRadius);
+            ctx.lineTo(x + rectSize, y + rectSize - rectRadius);
+            ctx.arcTo(x + rectSize, y + rectSize, x + rectSize - rectRadius, y + rectSize, rectRadius);
+            ctx.lineTo(x + rectRadius, y + rectSize);
+            ctx.arcTo(x, y + rectSize, x, y + rectSize - rectRadius, rectRadius);
+            ctx.lineTo(x, y + rectRadius);
+            ctx.arcTo(x, y, x + rectRadius, y, rectRadius);
+            ctx.closePath();
+            ctx.fill();
+
+            // Remove shadow for emoji
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Draw emoji
+            ctx.font = `${512 * scale}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🌱', 0, 0);
+
+            // Restore context
+            ctx.restore();
+        }
+
+        function setSize(size) {
+            currentSize = size;
+
+            // Update active button
+            document.querySelectorAll('.size-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Redraw logo
+            drawLogo(size);
+        }
+
+        function downloadPNG() {
+            const canvas = document.getElementById('logoCanvas');
+            const link = document.createElement('a');
+            link.download = `nurture-logo-${currentSize}x${currentSize}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Initial draw
+        drawLogo(1024);
+    </script>
+</body>
+</html>
