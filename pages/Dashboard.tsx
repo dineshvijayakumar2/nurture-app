@@ -302,8 +302,8 @@ export const Dashboard = () => {
                         <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
                             <ICONS.Timeline className="w-7 h-7 text-[#A8C5A8]" />
                         </div>
-                        <h4 className="font-black text-slate-900 text-sm mb-1">Add Activity</h4>
-                        <p className="text-[10px] text-slate-400 font-bold">Schedule new classes</p>
+                        <h4 className="font-black text-slate-900 text-sm mb-1">View Activities</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Track attendance & stats</p>
                     </button>
 
                     <button
@@ -311,10 +311,10 @@ export const Dashboard = () => {
                         className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
                     >
                         <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <ICONS.Values className="w-7 h-7 text-[#A8C5A8]" />
+                            <ICONS.Bookmark className="w-7 h-7 text-[#A8C5A8]" />
                         </div>
-                        <h4 className="font-black text-slate-900 text-sm mb-1">Research</h4>
-                        <p className="text-[10px] text-slate-400 font-bold">Browse knowledge base</p>
+                        <h4 className="font-black text-slate-900 text-sm mb-1">Value Garden</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Family values & wisdom</p>
                     </button>
 
                     <button
