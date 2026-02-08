@@ -187,11 +187,12 @@ export const Dashboard = () => {
     const handleOpenEdit = (cls: ScheduledClass, specificDate?: Date) => {
         // For editing a specific date occurrence
         if (specificDate !== undefined) {
-            setEditingClass(cls);
+            // Don't set editingClass - we want to create a NEW one-time event, not update the recurring one
+            setEditingClass(null);
             const dateString = specificDate.toISOString().split('T')[0];
             const dayTime = getTimeForDay(cls, specificDate.getDay());
 
-            // Create a one-time event for this specific date
+            // Create a one-time event for this specific date (both date and time are editable)
             setFormData({
                 name: cls.name,
                 category: cls.category,
