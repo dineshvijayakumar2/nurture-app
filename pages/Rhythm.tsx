@@ -3,15 +3,54 @@ import { useFamily } from '../context/FamilyContext';
 import { ICONS } from '../constants';
 import { ScheduledClass } from '../types';
 
+type StatsPeriod = '7days' | '30days' | '3months' | '6months' | '1year' | 'all';
+
 export const Rhythm = () => {
     const { child, activities, scheduledClasses, updateSchedule, deleteSchedule } = useFamily();
     const [expandedClass, setExpandedClass] = useState<string | null>(null);
-    const [editingSchedule, setEditingSchedule] = useState<ScheduledClass | null>(null);
+    const [selectedPeriod, setSelectedPeriod] = useState<StatsPeriod>('30days');
 
     // Calculate attendance statistics
     const attendanceStats = useMemo(() => {
-        // Filter out missed/cancelled activities from stats
-        const attendedActivities = activities.filter(act => act.status !== 'missed' && act.status !== 'cancelled');
+        // Get date range based on selected period
+        const now = new Date();
+        let startDate: Date | null = null;
+
+        switch (selectedPeriod) {
+            case '7days':
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+                break;
+            case '30days':
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 30);
+                break;
+            case '3months':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 3);
+                break;
+            case '6months':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 6);
+                break;
+            case '1year':
+                startDate = new Date(now);
+                startDate.setFullYear(now.getFullYear() - 1);
+                break;
+            case 'all':
+            default:
+                startDate = null; // No filter
+                break;
+        }
+
+        // Filter activities by period and exclude missed/cancelled
+        let filteredActivities = activities.filter(act => act.status !== 'missed' && act.status !== 'cancelled');
+
+        if (startDate) {
+            filteredActivities = filteredActivities.filter(act => new Date(act.timestamp) >= startDate!);
+        }
+
+        const attendedActivities = filteredActivities;
 
         const totalHours = attendedActivities.reduce((sum, act) => sum + act.durationHours, 0);
         const totalClasses = attendedActivities.length;
@@ -39,20 +78,42 @@ export const Rhythm = () => {
             totalClasses,
             byClassName,
             recentActivities,
-            averageHoursPerWeek: totalHours / Math.max(1, Math.ceil(totalClasses / 7))
+            averageHoursPerWeek: totalHours / Math.max(1, Math.ceil(totalClasses / 7)),
+            periodLabel: selectedPeriod === '7days' ? 'Last 7 Days' :
+                        selectedPeriod === '30days' ? 'Last 30 Days' :
+                        selectedPeriod === '3months' ? 'Last 3 Months' :
+                        selectedPeriod === '6months' ? 'Last 6 Months' :
+                        selectedPeriod === '1year' ? 'Last Year' : 'All Time'
         };
-    }, [activities]);
+    }, [activities, selectedPeriod]);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header with Stats */}
             <div className="space-y-4">
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-1">
                             Activity Stats
                         </h1>
                         <p className="text-sm text-slate-500 font-medium">Track attendance and progress</p>
+                    </div>
+
+                    {/* Period Selector */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs font-black uppercase tracking-wider text-slate-400">Period:</label>
+                        <select
+                            value={selectedPeriod}
+                            onChange={(e) => setSelectedPeriod(e.target.value as StatsPeriod)}
+                            className="px-4 py-2 rounded-xl bg-white border-2 border-slate-200 text-sm font-bold text-slate-700 focus:border-[#A8C5A8] outline-none"
+                        >
+                            <option value="7days">Last 7 Days</option>
+                            <option value="30days">Last 30 Days</option>
+                            <option value="3months">Last 3 Months</option>
+                            <option value="6months">Last 6 Months</option>
+                            <option value="1year">Last Year</option>
+                            <option value="all">All Time</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -186,7 +247,7 @@ export const Rhythm = () => {
                     <div className="bg-gradient-to-br from-[#A8C5A8] to-[#8ba78b] rounded-[32px] p-6 text-white shadow-lg">
                         <div className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">Total Hours</div>
                         <div className="text-4xl font-black">{attendanceStats.totalHours.toFixed(1)}</div>
-                        <div className="text-xs opacity-80 mt-2">All time attendance</div>
+                        <div className="text-xs opacity-80 mt-2">{attendanceStats.periodLabel}</div>
                     </div>
                     <div className="bg-white rounded-[32px] p-6 border-2 border-slate-200 shadow-sm">
                         <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Total Sessions</div>
