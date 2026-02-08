@@ -15,6 +15,7 @@ interface ProfileModalProps {
     onRemoveParent: (userId: string) => void;
     onLeaveFamily: () => void;
     onNeuralBurn: () => void;
+    onLogout: () => void;
 }
 
 const DIET_TYPES = ['none', 'vegan', 'vegetarian', 'omnivore'] as const;
@@ -29,7 +30,8 @@ export const ProfileModal = ({
     parents,
     familyId,
     onRemoveParent,
-    onLeaveFamily
+    onLeaveFamily,
+    onLogout
 }: ProfileModalProps) => {
     const [activeTab, setActiveTab] = useState<'child' | 'parent'>('child');
     const [copied, setCopied] = useState(false);
@@ -398,6 +400,19 @@ export const ProfileModal = ({
                             className="w-full py-4 bg-red-50 text-red-600 rounded-[24px] font-bold text-sm hover:bg-red-100 active:scale-95 transition-all border border-red-200"
                         >
                             🚪 Leave Family
+                        </button>
+
+                        {/* Logout Button */}
+                        <button
+                            onClick={() => {
+                                if (window.confirm('Are you sure you want to log out?')) {
+                                    onLogout();
+                                    onClose();
+                                }
+                            }}
+                            className="w-full py-4 bg-slate-100 text-slate-700 rounded-[24px] font-bold text-sm hover:bg-slate-200 active:scale-95 transition-all border border-slate-300"
+                        >
+                            🔓 Logout
                         </button>
 
                         {/* Family ID Section */}

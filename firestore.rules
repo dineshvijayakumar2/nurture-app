@@ -2,18 +2,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Users can only access their own user profile document
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
+
+    // DEMO FAMILY: Public read access for hackathon judges
+    // Allows anyone to READ the demo family data, but only owner can WRITE
+    match /families/nKUVUPwhEQOnYH2lhfTIlw71rhT2/{document=**} {
+      allow read: if true;  // Public read access for demo
+      allow write: if request.auth != null && request.auth.uid == 'nKUVUPwhEQOnYH2lhfTIlw71rhT2';
+    }
+
     // Families and all subcollections (profiles, logs, insights)
     // Access is granted if the user's record (which they own) matches this familyId
     match /families/{familyId}/{document=**} {
       allow read, write: if request.auth != null && (
         // Case 1: The user IS the family creator (Family ID matches their UID)
-        familyId == request.auth.uid || 
+        familyId == request.auth.uid ||
         // Case 2: The user has JOINED this family (their user record points to it)
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.familyId == familyId
       );

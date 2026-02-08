@@ -509,7 +509,7 @@ export const Dashboard = () => {
                             Hello, {user?.displayName?.split(' ')[0] || 'there'}
                         </h2>
                         <p className="text-sm text-slate-600 font-semibold">
-                            Tracking {child?.name || 'your child'}
+                            Child: {child?.name || 'your child'}
                         </p>
                         <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-0.5">
                             {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}

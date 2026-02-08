@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import {
     getChild, saveChild,
@@ -20,11 +20,11 @@ import { processLogEntry, generateNeuralReading, generateChatResponse, generateV
 import { ChildProfile, ParentProfile, LogEntry, NeuralReading, ChatMessage, Value, ValueDialogue, KnowledgeSource, Activity, ScheduledClass, ActivityCategory, Mood } from '../types';
 import { PREDEFINED_ICONS } from '../constants';
 
-// MOCK USER for Demo Mode
+// DEMO USER for Hackathon (uses real family data)
 const MOCK_DEMO_USER = {
-    uid: 'demo-user-123',
-    displayName: 'Demo Parent',
-    email: 'demo@nurture.app'
+    uid: 'nKUVUPwhEQOnYH2lhfTIlw71rhT2',
+    displayName: 'Dinesh Vijayakumar',
+    email: 'dinwin1989@gmail.com'
 } as any;
 
 interface FamilyContextType {
@@ -44,6 +44,7 @@ interface FamilyContextType {
 
     // Actions
     loginDemo: () => void;
+    logout: () => Promise<void>;
     setChild: (child: ChildProfile) => void;
     saveChildProfile: (profile: ChildProfile) => Promise<void>;
     saveParentProfileData: (profile: ParentProfile) => Promise<void>;
@@ -232,7 +233,28 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const loginDemo = () => {
         setIsDemoMode(true);
         setUser(MOCK_DEMO_USER);
-        initFamilyData('demo-user-123');
+        initFamilyData('nKUVUPwhEQOnYH2lhfTIlw71rhT2');
+    };
+
+    const logout = async () => {
+        try {
+            await signOut(auth);
+            // Clear local state
+            setUser(null);
+            setFamilyId(null);
+            setChild(null);
+            setParents([]);
+            setLogs([]);
+            setReadings([]);
+            setActivities([]);
+            setScheduledClasses([]);
+            setKnowledge([]);
+            setChatMessages([]);
+            setIsDemoMode(false);
+        } catch (error) {
+            console.error('Logout error:', error);
+            alert('Failed to log out. Please try again.');
+        }
     };
 
     const saveChildProfile = async (profile: ChildProfile) => {
@@ -506,7 +528,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         <FamilyContext.Provider value={{
             user, familyId, child, parents, logs, readings, activities, scheduledClasses, knowledge, chatMessages,
             isDemoMode, isLoading, authLoading,
-            loginDemo, setChild, saveChildProfile, saveParentProfileData, removeParentFromFamily, leaveFamily, joinFamily,
+            loginDemo, logout, setChild, saveChildProfile, saveParentProfileData, removeParentFromFamily, leaveFamily, joinFamily,
             addLog, addActivity, addSchedule, updateSchedule, deleteSchedule, moveClass,
             generateReading, sendChatMessage, addKnowledge, updateKnowledge, deleteKnowledge, getParentName, runMigration, wipeData,
             transcribeAudio

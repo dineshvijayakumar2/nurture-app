@@ -35,20 +35,20 @@ export const Layout = ({
   };
 
   return (
-    <div className="flex flex-col min-h-screen max-w-5xl mx-auto bg-[#FFF9E6] shadow-[0_0_100px_rgba(168,197,168,0.1)] overflow-hidden relative font-['Outfit'] border-x border-white/20">
-      <div className="fixed inset-0 pointer-events-none opacity-20">
+    <div className="flex flex-col h-screen max-w-5xl mx-auto bg-[#FFF9E6] shadow-[0_0_100px_rgba(168,197,168,0.1)] overflow-hidden relative font-['Outfit'] border-x border-white/20">
+      <div className="fixed inset-0 pointer-events-none opacity-20 max-w-5xl mx-auto">
         <div className={`absolute top-[-10%] left-[-10%] w-[80%] h-[50%] bg-[#A8C5A8] blur-[140px] rounded-full transition-all duration-1000 ${isProcessing ? 'animate-pulse scale-110' : ''}`}></div>
         <div className={`absolute bottom-[-10%] right-[-10%] w-[80%] h-[50%] bg-[#6B9AC4] blur-[140px] rounded-full transition-all duration-1000 delay-500 ${isProcessing ? 'animate-pulse scale-110' : ''}`}></div>
       </div>
 
-      <header className="px-8 md:px-14 py-8 flex justify-between items-center bg-white/40 backdrop-blur-md border-b border-white/20 sticky top-0 z-[60]">
+      <header className="px-8 md:px-14 py-8 flex justify-between items-center bg-white/40 backdrop-blur-md border-b border-white/20 sticky top-0 z-[60] flex-shrink-0">
         <div className="flex items-center gap-5">
           <div className="w-12 h-12 rounded-[20px] bg-[#A8C5A8] flex items-center justify-center shadow-xl rotate-3">
             <span className="text-3xl">🌱</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 font-['Quicksand']">Nurture</h1>
         </div>
-        
+
         <button
           onClick={onProfileClick}
           className="relative transition-transform active:scale-90 group"
@@ -79,27 +79,27 @@ export const Layout = ({
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto pb-48 md:pb-56 px-8 md:px-14 pt-2 relative z-10">
+      <main className="flex-1 overflow-y-auto pb-24 md:pb-28 px-8 md:px-14 pt-2 relative z-10">
         {children}
       </main>
 
-      <div className="fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 w-[94%] max-w-2xl z-[70]">
-        <nav className="bg-slate-950/95 backdrop-blur-3xl rounded-[44px] p-4 flex justify-between items-center shadow-2xl border border-white/10 relative">
-          <div 
-            className="absolute h-14 w-[18%] bg-white/10 border border-white/5 rounded-[28px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-            style={{ left: `calc(${getActiveIndex() * 20}% + 16px)` }}
+      <div className="fixed bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-xl z-[70]">
+        <nav className="bg-slate-950/95 backdrop-blur-3xl rounded-[32px] p-2.5 flex justify-between items-center shadow-2xl border border-white/10 relative">
+          <div
+            className="absolute h-11 w-[18%] bg-white/10 border border-white/5 rounded-[22px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            style={{ left: `calc(${getActiveIndex() * 20}% + 10px)` }}
           />
-          
+
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center py-2 relative z-10 transition-all duration-300 ${
-                activeTab === item.id ? 'text-white scale-110' : 'text-slate-500 hover:text-slate-300'
+              className={`flex-1 flex flex-col items-center justify-center py-1.5 relative z-10 transition-all duration-300 ${
+                activeTab === item.id ? 'text-white scale-105' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
-              <item.icon className={`w-6 h-6 mb-1.5 ${activeTab === item.id ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.7)]' : ''}`} />
-              <span className="hidden sm:block text-[9px] font-black uppercase tracking-widest">{item.label}</span>
+              <item.icon className={`w-5 h-5 mb-1 ${activeTab === item.id ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.7)]' : ''}`} />
+              <span className="hidden sm:block text-[8px] font-black uppercase tracking-widest">{item.label}</span>
             </button>
           ))}
         </nav>

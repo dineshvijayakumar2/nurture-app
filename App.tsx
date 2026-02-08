@@ -12,7 +12,7 @@ import { ValueGarden } from './pages/ValueGarden';
 import { saveChild } from './services/storageService';
 
 const AppContent = () => {
-  const { user, child, parents, familyId, isDemoMode, loginDemo, authLoading, setChild, saveParentProfileData, removeParentFromFamily, leaveFamily, joinFamily, runMigration, wipeData } = useFamily();
+  const { user, child, parents, familyId, isDemoMode, loginDemo, logout, authLoading, setChild, saveParentProfileData, removeParentFromFamily, leaveFamily, joinFamily, runMigration, wipeData } = useFamily();
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +57,7 @@ const AppContent = () => {
         onRemoveParent={removeParentFromFamily}
         onLeaveFamily={leaveFamily}
         onNeuralBurn={wipeData}
+        onLogout={logout}
       />
     </Layout>
   );
