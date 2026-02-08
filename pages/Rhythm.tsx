@@ -338,16 +338,30 @@ export const Rhythm = () => {
 
     // Statistics
     const stats = useMemo(() => {
-        const weekClasses = weekDays.flatMap(d => getClassesForDate(d));
-        const totalHours = weekClasses.reduce((sum, cls) => sum + cls.durationHours, 0);
+        let datesToCheck: Date[] = [];
+
+        if (viewMode === 'week') {
+            datesToCheck = weekDays;
+        } else {
+            // Calculate all days in the current month
+            const year = currentWeek.getFullYear();
+            const month = currentWeek.getMonth();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            datesToCheck = Array.from({ length: daysInMonth }, (_, i) => {
+                return new Date(year, month, i + 1);
+            });
+        }
+
+        const classes = datesToCheck.flatMap(d => getClassesForDate(d));
+        const totalHours = classes.reduce((sum, cls) => sum + cls.durationHours, 0);
         const byCategory = CATEGORIES.map(cat => ({
             ...cat,
-            count: weekClasses.filter(cls => cls.category === cat.value).length,
-            hours: weekClasses.filter(cls => cls.category === cat.value).reduce((sum, cls) => sum + cls.durationHours, 0),
+            count: classes.filter(cls => cls.category === cat.value).length,
+            hours: classes.filter(cls => cls.category === cat.value).reduce((sum, cls) => sum + cls.durationHours, 0),
         }));
 
-        return { totalHours, byCategory, classCount: weekClasses.length };
-    }, [weekDays, scheduledClasses]);
+        return { totalHours, byCategory, classCount: classes.length };
+    }, [weekDays, currentWeek, viewMode, scheduledClasses]);
 
     const navigateWeek = (direction: number) => {
         const next = new Date(currentWeek);
