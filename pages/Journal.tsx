@@ -97,11 +97,11 @@ export const Journal: React.FC = () => {
                     return (
                         <div key={log.id} className={`bg-white p-10 rounded-[56px] border shadow-sm relative transition-all ${log.visibility === 'private' ? 'border-indigo-100 bg-indigo-50/10' : 'border-white'}`}>
                             <div className="flex justify-between items-center mb-6">
-                                <span className="text-[9px] font-black text-[#A8C5A8] uppercase tracking-[0.4em]">{new Date(log.timestamp).toLocaleDateString()}</span>
-                                <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">{authorName}</span>
+                                <span className="text-xs font-black text-[#A8C5A8] uppercase tracking-[0.3em]">{new Date(log.timestamp).toLocaleDateString()}</span>
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full">{authorName}</span>
                             </div>
                             {log.image && <img src={log.image} className="w-full h-72 rounded-[40px] object-cover mb-8 shadow-md" />}
-                            <p className="text-xl text-slate-800 font-bold leading-relaxed whitespace-pre-wrap">"{log.content}"</p>
+                            <p className="text-lg text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">"{log.content}"</p>
                         </div>
                     );
                 })}

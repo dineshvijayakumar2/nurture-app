@@ -45,6 +45,8 @@ export const Dashboard = () => {
     const [showQuickEditTime, setShowQuickEditTime] = useState(false);
     const [quickEditDay, setQuickEditDay] = useState<number | null>(null);
     const [quickEditTime, setQuickEditTime] = useState('09:00');
+    const [showEditScopeModal, setShowEditScopeModal] = useState(false);
+    const [pendingEditAction, setPendingEditAction] = useState<{ class: ScheduledClass; action: 'edit' | 'delete'; dayIndex?: number } | null>(null);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -102,19 +104,38 @@ export const Dashboard = () => {
     };
 
     const handleQuickSave = async () => {
-        if (!formData.name.trim() || formData.selectedDays.length === 0) return;
+        if (!formData.name.trim()) return;
+        if (formData.isRecurring && formData.selectedDays.length === 0) return;
 
-        await addSchedule(
-            formData.name,
-            formData.category,
-            formData.duration,
-            formData.selectedDays,
-            0,
-            formData.startDate,
-            formData.isRecurring,
-            undefined,
-            formData.startTime
-        );
+        if (editingClass) {
+            // Update existing class
+            const updatedClass: ScheduledClass = {
+                ...editingClass,
+                name: formData.name,
+                category: formData.category,
+                durationHours: formData.duration,
+                daysOfWeek: formData.isRecurring ? formData.selectedDays : undefined,
+                startTime: formData.startTime,
+                startDate: formData.startDate,
+                endDate: formData.endDate || undefined,
+                isRecurring: formData.isRecurring,
+            };
+            await updateSchedule(updatedClass);
+        } else {
+            // Create new schedule
+            await addSchedule(
+                formData.name,
+                formData.category,
+                formData.duration,
+                formData.selectedDays,
+                0,
+                formData.startDate,
+                formData.isRecurring,
+                undefined,
+                formData.startTime,
+                formData.endDate || undefined
+            );
+        }
 
         setShowQuickAdd(false);
         setQuickAddDay(null);
@@ -148,6 +169,7 @@ export const Dashboard = () => {
     };
 
     const handleOpenEdit = (cls: ScheduledClass, dayIndex?: number) => {
+        // For time-only edits (specific day time changes)
         if (dayIndex !== undefined) {
             setEditingClass(cls);
             setQuickEditDay(dayIndex);
@@ -156,6 +178,14 @@ export const Dashboard = () => {
             return;
         }
 
+        // For recurring events, show scope selector
+        if (cls.isRecurring && (cls.daysOfWeek || cls.dayOfWeek !== undefined)) {
+            setPendingEditAction({ class: cls, action: 'edit' });
+            setShowEditScopeModal(true);
+            return;
+        }
+
+        // For one-time events, edit directly
         setEditingClass(cls);
         const days = cls.daysOfWeek || (cls.dayOfWeek !== undefined ? [cls.dayOfWeek] : [0]);
 
@@ -191,15 +221,84 @@ export const Dashboard = () => {
         setQuickEditDay(null);
     };
 
-    const handleDelete = async (id: string) => {
-        try {
-            await deleteSchedule(id);
-            setShowQuickAdd(false);
-            resetForm();
-        } catch (error) {
-            console.error('Failed to delete schedule:', error);
-            alert('Failed to delete activity. Please try again.');
+    const handleDelete = async (cls: ScheduledClass | string) => {
+        const classObj = typeof cls === 'string'
+            ? scheduledClasses.find(c => c.id === cls)
+            : cls;
+
+        if (!classObj) return;
+
+        // For recurring events, show scope selector
+        if (classObj.isRecurring && (classObj.daysOfWeek || classObj.dayOfWeek !== undefined)) {
+            setPendingEditAction({ class: classObj, action: 'delete' });
+            setShowEditScopeModal(true);
+            return;
         }
+
+        // For one-time events, delete directly with confirmation
+        if (window.confirm(`Remove "${classObj.name}"?`)) {
+            try {
+                await deleteSchedule(classObj.id);
+                setShowQuickAdd(false);
+                resetForm();
+            } catch (error) {
+                console.error('Failed to delete schedule:', error);
+                alert('Failed to delete activity. Please try again.');
+            }
+        }
+    };
+
+    const handleEditScopeSelection = async (scope: 'this' | 'future' | 'all') => {
+        if (!pendingEditAction) return;
+
+        const { class: cls, action, dayIndex } = pendingEditAction;
+        setShowEditScopeModal(false);
+
+        if (action === 'delete') {
+            if (!window.confirm(`Remove "${cls.name}"?`)) {
+                setPendingEditAction(null);
+                return;
+            }
+
+            try {
+                if (scope === 'all') {
+                    // Delete entire series
+                    await deleteSchedule(cls.id);
+                } else {
+                    // For "this" or "future", set end date
+                    const today = new Date().toISOString().split('T')[0];
+                    const updatedClass = {
+                        ...cls,
+                        endDate: scope === 'this' ? today : today
+                    };
+                    await updateSchedule(updatedClass);
+                }
+                setShowQuickAdd(false);
+                resetForm();
+            } catch (error) {
+                console.error('Failed to delete schedule:', error);
+                alert('Failed to delete activity. Please try again.');
+            }
+        } else if (action === 'edit') {
+            // For edit, open the form
+            setEditingClass(cls);
+            const days = cls.daysOfWeek || (cls.dayOfWeek !== undefined ? [cls.dayOfWeek] : [0]);
+
+            setFormData({
+                name: cls.name,
+                category: cls.category,
+                day: days[0] || 0,
+                selectedDays: days,
+                startTime: cls.startTime || '09:00',
+                duration: cls.durationHours,
+                startDate: scope === 'future' ? new Date().toISOString().split('T')[0] : cls.startDate,
+                endDate: cls.endDate || '',
+                isRecurring: cls.isRecurring !== false,
+            });
+            setShowQuickAdd(true);
+        }
+
+        setPendingEditAction(null);
     };
 
     const getTimeForDay = (cls: ScheduledClass, dayIndex: number): string => {
@@ -523,7 +622,7 @@ export const Dashboard = () => {
                                                                 Edit
                                                             </button>
                                                             <button
-                                                                onClick={() => handleDelete(cls.id)}
+                                                                onClick={() => handleDelete(cls)}
                                                                 className="py-2.5 bg-red-50 rounded-xl text-xs font-black uppercase tracking-wider text-red-600 hover:bg-red-100 transition-colors"
                                                             >
                                                                 Remove
@@ -785,23 +884,23 @@ export const Dashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Current Reading</p>
-                                    <p className="text-sm text-slate-700 leading-relaxed">{reading.currentReading}</p>
+                                    <p className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Current Reading</p>
+                                    <p className="text-base text-slate-700 leading-relaxed">{reading.currentReading}</p>
                                 </div>
 
                                 {reading.forecast && (
                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Forecast</p>
-                                        <p className="text-sm text-slate-700 leading-relaxed">{reading.forecast}</p>
+                                        <p className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Forecast</p>
+                                        <p className="text-base text-slate-700 leading-relaxed">{reading.forecast}</p>
                                     </div>
                                 )}
 
                                 {reading.scienceBackground && (
                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Science Background</p>
-                                        <p className="text-xs text-slate-600 leading-relaxed">{reading.scienceBackground}</p>
+                                        <p className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Science Background</p>
+                                        <p className="text-sm text-slate-600 leading-relaxed">{reading.scienceBackground}</p>
                                     </div>
                                 )}
                             </div>
@@ -821,6 +920,82 @@ export const Dashboard = () => {
                         <ICONS.Sparkles className={`w-6 h-6 ${isLoading ? 'animate-spin' : ''}`} />
                         {isLoading ? 'Generating AI Insights...' : 'Generate AI Insights'}
                     </button>
+                </div>
+            )}
+
+            {/* Edit Scope Modal - Google Calendar style */}
+            {showEditScopeModal && pendingEditAction && (
+                <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+                        onClick={() => {
+                            setShowEditScopeModal(false);
+                            setPendingEditAction(null);
+                        }}
+                    />
+
+                    <div className="relative bg-white rounded-t-[32px] md:rounded-[32px] w-full max-w-md shadow-2xl animate-in slide-in-from-bottom md:slide-in-from-bottom-0">
+                        <div className="px-6 pt-6 pb-4 border-b border-slate-100">
+                            <h3 className="text-xl font-black text-slate-900">
+                                {pendingEditAction.action === 'delete' ? 'Remove Recurring Activity' : 'Edit Recurring Activity'}
+                            </h3>
+                            <p className="text-sm text-slate-500 mt-1">{pendingEditAction.class.name}</p>
+                        </div>
+
+                        <div className="p-6 space-y-3">
+                            <button
+                                onClick={() => handleEditScopeSelection('this')}
+                                className="w-full p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 hover:border-[#A8C5A8] transition-all text-left group"
+                            >
+                                <div className="text-base font-black text-slate-900 group-hover:text-[#A8C5A8] transition-colors">
+                                    This event only
+                                </div>
+                                <div className="text-xs text-slate-500 mt-1">
+                                    {pendingEditAction.action === 'delete'
+                                        ? 'Remove only this occurrence'
+                                        : 'Modify only this occurrence'}
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => handleEditScopeSelection('future')}
+                                className="w-full p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 hover:border-[#A8C5A8] transition-all text-left group"
+                            >
+                                <div className="text-base font-black text-slate-900 group-hover:text-[#A8C5A8] transition-colors">
+                                    This and future events
+                                </div>
+                                <div className="text-xs text-slate-500 mt-1">
+                                    {pendingEditAction.action === 'delete'
+                                        ? 'Remove this and all future occurrences'
+                                        : 'Modify this and all future occurrences'}
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => handleEditScopeSelection('all')}
+                                className="w-full p-4 rounded-xl bg-slate-50 hover:bg-slate-100 border-2 border-slate-200 hover:border-[#A8C5A8] transition-all text-left group"
+                            >
+                                <div className="text-base font-black text-slate-900 group-hover:text-[#A8C5A8] transition-colors">
+                                    All events
+                                </div>
+                                <div className="text-xs text-slate-500 mt-1">
+                                    {pendingEditAction.action === 'delete'
+                                        ? 'Remove all occurrences in the series'
+                                        : 'Modify all occurrences in the series'}
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setShowEditScopeModal(false);
+                                    setPendingEditAction(null);
+                                }}
+                                className="w-full py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors mt-4"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -924,30 +1099,95 @@ export const Dashboard = () => {
                                 ))}
                             </div>
 
-                            {/* Multi-day selector */}
+                            {/* Recurring Toggle */}
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1 block">
-                                    Days of Week
+                                <label className="text-xs font-black uppercase tracking-wider text-slate-400 ml-1 block">
+                                    Activity Type
                                 </label>
-                                <div className="grid grid-cols-7 gap-1">
-                                    {DAYS_MON_FIRST.map(day => {
-                                        const isSelected = formData.selectedDays.includes(day.index);
-                                        return (
-                                            <button
-                                                key={day.index}
-                                                type="button"
-                                                onClick={() => toggleDaySelection(day.index)}
-                                                className={`py-2 rounded-lg border-2 transition-all ${
-                                                    isSelected
-                                                        ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
-                                                        : 'border-slate-200 bg-white text-slate-600'
-                                                }`}
-                                            >
-                                                <div className="text-[9px] font-black">{day.short}</div>
-                                            </button>
-                                        );
-                                    })}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, isRecurring: true })}
+                                        className={`py-3 px-4 rounded-xl border-2 transition-all ${
+                                            formData.isRecurring
+                                                ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="text-sm font-black">🔄 Recurring</div>
+                                        <div className="text-[8px] font-medium opacity-70 mt-0.5">Repeats weekly</div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, isRecurring: false })}
+                                        className={`py-3 px-4 rounded-xl border-2 transition-all ${
+                                            !formData.isRecurring
+                                                ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="text-sm font-black">📅 One-time</div>
+                                        <div className="text-[8px] font-medium opacity-70 mt-0.5">Single event</div>
+                                    </button>
                                 </div>
+                            </div>
+
+                            {/* Multi-day selector (only for recurring) */}
+                            {formData.isRecurring && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-wider text-slate-400 ml-1 block">
+                                        Days of Week
+                                    </label>
+                                    <div className="grid grid-cols-7 gap-1">
+                                        {DAYS_MON_FIRST.map(day => {
+                                            const isSelected = formData.selectedDays.includes(day.index);
+                                            return (
+                                                <button
+                                                    key={day.index}
+                                                    type="button"
+                                                    onClick={() => toggleDaySelection(day.index)}
+                                                    className={`py-2 rounded-lg border-2 transition-all ${
+                                                        isSelected
+                                                            ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
+                                                            : 'border-slate-200 bg-white text-slate-600'
+                                                    }`}
+                                                >
+                                                    <div className="text-[9px] font-black">{day.short}</div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Date Fields */}
+                            <div className={`grid ${formData.isRecurring ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                                <div>
+                                    <label className="text-xs font-black uppercase tracking-wider text-slate-400 ml-1 mb-2 block">
+                                        {formData.isRecurring ? 'Start Date' : 'Event Date'}
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={formData.startDate}
+                                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-[#A8C5A8] outline-none font-semibold text-slate-900 text-sm"
+                                    />
+                                </div>
+                                {formData.isRecurring && (
+                                    <div>
+                                        <label className="text-xs font-black uppercase tracking-wider text-slate-400 ml-1 mb-2 block">
+                                            End Date (Optional)
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={formData.endDate}
+                                            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                            placeholder="Ongoing"
+                                            min={formData.startDate}
+                                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-[#A8C5A8] outline-none font-semibold text-slate-900 text-sm placeholder:text-slate-400"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
@@ -980,7 +1220,7 @@ export const Dashboard = () => {
                             <div className="flex gap-3 pt-2">
                                 {editingClass && (
                                     <button
-                                        onClick={() => handleDelete(editingClass.id)}
+                                        onClick={() => handleDelete(editingClass)}
                                         className="px-6 py-3 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
                                     >
                                         Delete
