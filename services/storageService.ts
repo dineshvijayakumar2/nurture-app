@@ -59,35 +59,27 @@ export const deepSanitize = (data: any): any => {
 };
 
 export const getUserFamilyId = async (userId: string): Promise<string> => {
-  console.log('📝 getUserFamilyId called with userId:', userId);
 
   if (IS_DEMO(userId)) {
-    console.log('Demo mode detected, returning userId as familyId');
     return userId;
   }
 
   try {
     const userDoc = await getDoc(doc(db, "users", userId));
-    console.log('User document exists:', userDoc.exists());
 
     if (userDoc.exists()) {
       const data = userDoc.data();
-      console.log('User document data:', data);
 
       if (data.familyId) {
-        console.log('✅ Found existing familyId:', data.familyId);
         return data.familyId;
       }
     }
 
     // No familyId found, create new one
     const defaultFamilyId = userId;
-    console.log('Creating new familyId (defaulting to userId):', defaultFamilyId);
     await setDoc(doc(db, "users", userId), { familyId: defaultFamilyId }, { merge: true });
-    console.log('✅ Successfully saved new familyId to Firestore');
     return defaultFamilyId;
   } catch (error) {
-    console.error("❌ Error in getUserFamilyId:", error);
     return userId;
   }
 };
@@ -158,44 +150,33 @@ export const getKnowledgeSources = async (familyId: string): Promise<KnowledgeSo
 };
 
 export const deleteKnowledgeSource = async (familyId: string, sourceId: string) => {
-  console.log('🔥 deleteKnowledgeSource called with:', { familyId, sourceId });
 
   if (IS_DEMO(familyId)) {
-    console.log('Demo mode - skipping delete');
     return;
   }
 
   try {
     const docPath = `families/${familyId}/knowledge/${sourceId}`;
-    console.log('📍 Document path:', docPath);
 
     const docRef = doc(db, "families", familyId, "knowledge", sourceId);
-    console.log('📄 Document reference created:', docRef.path);
 
     // Check if document exists before deleting
     const docSnap = await getDoc(docRef);
-    console.log('Document exists before delete:', docSnap.exists());
 
     if (!docSnap.exists()) {
-      console.warn('⚠️ Document does not exist in Firestore!');
       throw new Error(`Document ${sourceId} not found in Firestore`);
     }
 
-    console.log('🗑️ Attempting to delete document...');
     await deleteDoc(docRef);
-    console.log('✅ Firestore deleteDoc completed successfully');
 
     // Verify deletion
     const verifySnap = await getDoc(docRef);
-    console.log('Document still exists after delete:', verifySnap.exists());
 
     if (verifySnap.exists()) {
-      console.error('❌ CRITICAL: Document still exists after deletion!');
       throw new Error('Document deletion failed - document still exists');
     }
 
   } catch (error) {
-    console.error('❌ Error in deleteKnowledgeSource:', error);
     throw error; // Re-throw to propagate to caller
   }
 };
@@ -244,44 +225,33 @@ export const updateScheduledClass = async (familyId: string, cls: ScheduledClass
 };
 
 export const deleteScheduledClass = async (familyId: string, classId: string) => {
-  console.log('🔥 deleteScheduledClass called with:', { familyId, classId });
 
   if (IS_DEMO(familyId)) {
-    console.log('Demo mode - skipping delete');
     return;
   }
 
   try {
     const docPath = `families/${familyId}/schedule/${classId}`;
-    console.log('📍 Document path:', docPath);
 
     const docRef = doc(db, "families", familyId, "schedule", classId);
-    console.log('📄 Document reference created:', docRef.path);
 
     // Check if document exists before deleting
     const docSnap = await getDoc(docRef);
-    console.log('Document exists before delete:', docSnap.exists());
 
     if (!docSnap.exists()) {
-      console.warn('⚠️ Document does not exist in Firestore!');
       throw new Error(`Document ${classId} not found in Firestore`);
     }
 
-    console.log('🗑️ Attempting to delete document...');
     await deleteDoc(docRef);
-    console.log('✅ Firestore deleteDoc completed successfully');
 
     // Verify deletion
     const verifySnap = await getDoc(docRef);
-    console.log('Document still exists after delete:', verifySnap.exists());
 
     if (verifySnap.exists()) {
-      console.error('❌ CRITICAL: Document still exists after deletion!');
       throw new Error('Document deletion failed - document still exists');
     }
 
   } catch (error) {
-    console.error('❌ Error in deleteScheduledClass:', error);
     throw error; // Re-throw to propagate to caller
   }
 };
@@ -344,9 +314,7 @@ export const migrateLegacyLogs = async (familyId: string, userId: string) => {
 
   if (count > 0) {
     await batch.commit();
-    console.log(`Migrated ${count} logs.`);
   } else {
-    console.log("No logs needed migration.");
   }
   return count;
 };

@@ -73,7 +73,6 @@ export const Journal: React.FC = () => {
                 }
             }, 120000);
         } catch (error) {
-            console.error('Microphone access error:', error);
             alert('Microphone access denied or unavailable. Please check your browser permissions.');
         }
     };
@@ -92,7 +91,6 @@ export const Journal: React.FC = () => {
             setTranscribedText(text);
             setShowTranscriptionModal(true);
         } catch (error) {
-            console.error('Transcription failed:', error);
             alert('Failed to transcribe audio. Please try again.');
         } finally {
             setIsTranscribing(false);

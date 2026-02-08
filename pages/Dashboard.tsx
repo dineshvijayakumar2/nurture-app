@@ -195,7 +195,6 @@ export const Dashboard = () => {
             const statusText = status === 'missed' ? 'Logged as missed' : 'Logged';
             alert(`${statusEmoji} ${statusText} "${cls.name}" for ${date.toLocaleDateString()}`);
         } catch (error) {
-            console.error('Failed to log activity:', error);
             alert('Failed to log activity. Please try again.');
         }
     };
@@ -279,7 +278,6 @@ export const Dashboard = () => {
                 setShowQuickAdd(false);
                 resetForm();
             } catch (error) {
-                console.error('Failed to delete schedule:', error);
                 alert('Failed to delete activity. Please try again.');
             }
         }
@@ -317,7 +315,6 @@ export const Dashboard = () => {
                 setShowQuickAdd(false);
                 resetForm();
             } catch (error) {
-                console.error('Failed to delete schedule:', error);
                 alert('Failed to delete activity. Please try again.');
             }
         } else if (action === 'edit') {

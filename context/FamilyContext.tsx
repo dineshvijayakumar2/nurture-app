@@ -102,60 +102,54 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             if (!storedChild && fid !== 'demo-user-123') await saveChild(fid, fidChild);
             setChild(fidChild);
 
-            console.log("Loading data for Family ID:", fid);
-            console.log("Loading data for Family ID:", fid);
-
             // Load critical data independently to prevent cascade failures
             try {
                 const fetchedLogs = await getLogs(fid);
                 setLogs(fetchedLogs);
-            } catch (e) { console.error("Failed to load logs", e); }
+            } catch (e) { /* Silent fail */ }
 
             try {
                 const fetchedInsights = await getInsights(fid);
                 setReadings((fetchedInsights as any[]).filter(r => r && r.architecture));
-            } catch (e) { console.error("Failed to load insights", e); }
+            } catch (e) { /* Silent fail */ }
 
             try {
                 const fetchedWisdom = await getKnowledgeSources(fid);
                 setKnowledge(fetchedWisdom);
-            } catch (e) { console.error("Failed to load wisdom", e); }
+            } catch (e) { /* Silent fail */ }
 
             try {
                 const fetchedActivities = await getActivities(fid);
                 setActivities(fetchedActivities);
-            } catch (e) { console.error("Failed to load activities", e); }
+            } catch (e) { /* Silent fail */ }
 
             try {
                 const fetchedSchedule = await getScheduledClasses(fid);
                 setScheduledClasses(fetchedSchedule);
-            } catch (e) { console.error("Failed to load schedule", e); }
+            } catch (e) { /* Silent fail */ }
 
             try {
                 // Chats might fail if index is missing, don't block app
                 const fetchedChats = await getChatMessages(fid, uid);
                 setChatMessages(fetchedChats);
-            } catch (e) { console.error("Failed to load chats (likely missing index)", e); }
+            } catch (e) { /* Silent fail */ }
 
             try {
                 const fetchedParents = await getFamilyParents(fid);
                 setParents(fetchedParents);
-            } catch (e) { console.error("Failed to load parents", e); }
-        } catch (error) { console.error("Error loading family data", error); }
+            } catch (e) { /* Silent fail */ }
+        } catch (error) { /* Silent fail */ }
     }, []);
 
     const initFamilyData = useCallback(async (uid: string) => {
         setIsLoading(true);
         try {
-            console.log('🔍 initFamilyData called with uid:', uid);
             const fid = await getUserFamilyId(uid);
-            console.log('📌 Got familyId from getUserFamilyId:', fid);
             setFamilyId(fid);
-            console.log('✅ Set familyId in state:', fid);
             await loadFamilyData(fid, uid);
             return fid; // Return the familyId for immediate use
         } catch (error) {
-            console.error('❌ Error in initFamilyData:', error);
+            // Silent fail
         } finally {
             setIsLoading(false);
         }
@@ -187,12 +181,11 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             };
             setChatMessages(prev => [...prev, modelMsg]);
             saveChatMessage(familyId, modelMsg);
-        } catch (e) { console.error(e); }
+        } catch (e) { /* Silent fail */ }
     };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            console.log('🔐 Auth state changed:', currentUser ? `User: ${currentUser.uid}` : 'No user');
 
             if (currentUser && !isDemoMode) {
                 setUser(currentUser);
@@ -200,15 +193,11 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 // Get familyId synchronously from initFamilyData return value
                 const fid = await initFamilyData(currentUser.uid);
 
-                console.log('👤 Checking parent profile with familyId:', fid);
-
                 // Auto-create parent profile if not exists (use fid directly, not state)
                 if (fid) {
                     const existingProfile = await getParentProfile(fid, currentUser.uid);
-                    console.log('Existing parent profile:', existingProfile);
 
                     if (!existingProfile) {
-                        console.log('Creating new parent profile...');
                         const newProfile: ParentProfile = {
                             id: currentUser.uid,
                             name: currentUser.displayName || 'Parent',
@@ -218,11 +207,8 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                         };
                         await saveParentProfile(fid, newProfile);
                         setParents(prev => [...prev, newProfile]);
-                        console.log('✅ Parent profile created');
                     }
                 }
-            } else {
-                console.log('⚠️ No current user or in demo mode');
             }
 
             setAuthLoading(false);
@@ -256,7 +242,6 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             setChatMessages([]);
             setIsDemoMode(false);
         } catch (error) {
-            console.error('Logout error:', error);
             alert('Failed to log out. Please try again.');
         }
     };
@@ -336,7 +321,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             await saveLog(familyId, newEntry);
             setLogs(p => [newEntry, ...p]);
             return newEntry;
-        } catch (error) { console.error(error); return undefined; } finally { setIsLoading(false); }
+        } catch (error) { return undefined; } finally { setIsLoading(false); }
     };
 
     const addActivity = async (name: string, category: ActivityCategory, duration: number, cost: number, mood: Mood, date: string, photo?: string | null, status: 'attended' | 'missed' | 'cancelled' = 'attended') => {
@@ -356,7 +341,7 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             };
             await saveActivity(familyId, activity);
             setActivities(p => [activity, ...p]);
-        } catch (error) { console.error(error); } finally { setIsLoading(false); }
+        } catch (error) { /* Silent fail */ } finally { setIsLoading(false); }
     };
 
     const addSchedule = async (name: string, category: ActivityCategory, duration: number, day: number | number[], cost: number, startDate?: string, isRecurring: boolean = true, specificDates?: string[], startTime: string = "09:00", endDate?: string, weekOccurrences?: number[]) => {
@@ -395,22 +380,19 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                         await updateChildIcons(familyId, finalIcons);
                         setChild(prev => prev ? { ...prev, activityIcons: finalIcons } : null);
                     }
-                } catch (e) { console.warn("AI Icon failed"); }
+                } catch (e) { /* Silent fail */ }
             }
-        } catch (error) { console.error(error); } finally { setIsLoading(false); }
+        } catch (error) { /* Silent fail */ } finally { setIsLoading(false); }
     };
 
     const updateSchedule = async (cls: ScheduledClass) => {
         if (!familyId) return;
         setIsLoading(true);
         try {
-            console.log('Updating schedule:', { familyId, classId: cls.id });
             await updateScheduledClass(familyId, cls);
             // Update local state
             setScheduledClasses(prev => prev.map(s => s.id === cls.id ? cls : s));
-            console.log('✅ Schedule updated successfully:', cls.id);
         } catch (error) {
-            console.error('❌ Failed to update schedule:', error);
             alert(`Failed to update: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsLoading(false);
@@ -418,23 +400,18 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
 
     const deleteSchedule = async (id: string) => {
-        console.log('🗑️ deleteSchedule called with:', { id, familyId });
 
         if (!familyId) {
-            console.error('❌ CRITICAL: familyId is null/undefined! Cannot delete schedule.');
             alert('Error: Family ID not set. Please refresh the page and try again.');
             return;
         }
 
         if (window.confirm("Remove?")) {
             try {
-                console.log('Deleting schedule:', { familyId, scheduleId: id });
                 await deleteScheduledClass(familyId, id);
                 // Update local state
                 setScheduledClasses(prev => prev.filter(i => i.id !== id));
-                console.log('✅ Schedule deleted successfully:', id);
             } catch (error) {
-                console.error('❌ Failed to delete schedule:', error);
                 alert(`Failed to delete: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
         }
@@ -468,20 +445,17 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             };
             await saveKnowledgeSource(familyId, newSource);
             setKnowledge(prev => [...prev, newSource]);
-        } catch (error) { console.error(error); } finally { setIsLoading(false); }
+        } catch (error) { /* Silent fail */ } finally { setIsLoading(false); }
     };
 
     const updateKnowledge = async (source: KnowledgeSource) => {
         if (!familyId) return;
         setIsLoading(true);
         try {
-            console.log('Updating knowledge:', { familyId, sourceId: source.id });
             await saveKnowledgeSource(familyId, source);
             // Update local state
             setKnowledge(prev => prev.map(s => s.id === source.id ? source : s));
-            console.log('✅ Knowledge updated successfully:', source.id);
         } catch (error) {
-            console.error('❌ Failed to update knowledge:', error);
             alert(`Failed to update wisdom: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsLoading(false);
@@ -489,23 +463,18 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
 
     const deleteKnowledge = async (id: string) => {
-        console.log('🗑️ deleteKnowledge called with:', { id, familyId });
 
         if (!familyId) {
-            console.error('❌ CRITICAL: familyId is null/undefined! Cannot delete knowledge.');
             alert('Error: Family ID not set. Please refresh the page and try again.');
             return;
         }
 
         setIsLoading(true);
         try {
-            console.log('Deleting knowledge:', { familyId, knowledgeId: id });
             await deleteKnowledgeSource(familyId, id);
             // Update local state
             setKnowledge(prev => prev.filter(s => s.id !== id));
-            console.log('✅ Knowledge deleted successfully:', id);
         } catch (error) {
-            console.error('❌ Failed to delete knowledge:', error);
             alert(`Failed to delete wisdom: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsLoading(false);
