@@ -6,7 +6,7 @@ import { NextUpCard } from '../components/Feed/FeedCards';
 import { ScheduledClass } from '../types';
 
 export const Dashboard = () => {
-    const { child, scheduledClasses, generateReading, isLoading } = useFamily();
+    const { child, scheduledClasses, readings, generateReading, isLoading } = useFamily();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const navigate = useNavigate();
 
@@ -280,55 +280,74 @@ export const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Quick Shortcuts */}
-            <div className="px-4 space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-2">Quick Actions</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <button
-                        onClick={() => navigate('/journal')}
-                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
-                    >
-                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <ICONS.Log className="w-7 h-7 text-[#A8C5A8]" />
-                        </div>
-                        <h4 className="font-black text-slate-900 text-sm mb-1">Log Moment</h4>
-                        <p className="text-[10px] text-slate-400 font-bold">Record daily observations</p>
-                    </button>
+            {/* AI Insights */}
+            {readings.length > 0 && (
+                <div className="px-4 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-2">AI Insights</h3>
+                        <button
+                            onClick={generateReading}
+                            disabled={isLoading}
+                            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-wider hover:shadow-md active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                            <ICONS.Sparkles className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+                            {isLoading ? 'Analyzing...' : 'Generate New'}
+                        </button>
+                    </div>
 
-                    <button
-                        onClick={() => navigate('/activities')}
-                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
-                    >
-                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <ICONS.Timeline className="w-7 h-7 text-[#A8C5A8]" />
-                        </div>
-                        <h4 className="font-black text-slate-900 text-sm mb-1">View Activities</h4>
-                        <p className="text-[10px] text-slate-400 font-bold">Track attendance & stats</p>
-                    </button>
+                    {readings.slice(0, 3).map((reading) => (
+                        <div key={reading.id} className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                    <div className="text-[9px] font-black uppercase tracking-wider text-[#A8C5A8] mb-2">
+                                        {new Date(reading.timestamp).toLocaleDateString(undefined, {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        })}
+                                    </div>
+                                    <h4 className="font-black text-slate-900 text-lg mb-2">{reading.architecture}</h4>
+                                </div>
+                            </div>
 
-                    <button
-                        onClick={() => navigate('/wisdom')}
-                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
-                    >
-                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <ICONS.Bookmark className="w-7 h-7 text-[#A8C5A8]" />
-                        </div>
-                        <h4 className="font-black text-slate-900 text-sm mb-1">Value Garden</h4>
-                        <p className="text-[10px] text-slate-400 font-bold">Family values & wisdom</p>
-                    </button>
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Current Reading</p>
+                                    <p className="text-sm text-slate-700 leading-relaxed">{reading.currentReading}</p>
+                                </div>
 
-                    <button
-                        onClick={() => navigate('/coach')}
-                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
-                    >
-                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
-                            <ICONS.Sparkles className="w-7 h-7 text-[#A8C5A8]" />
+                                {reading.forecast && (
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Forecast</p>
+                                        <p className="text-sm text-slate-700 leading-relaxed">{reading.forecast}</p>
+                                    </div>
+                                )}
+
+                                {reading.scienceBackground && (
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">Science Background</p>
+                                        <p className="text-xs text-slate-600 leading-relaxed">{reading.scienceBackground}</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <h4 className="font-black text-slate-900 text-sm mb-1">AI Coach</h4>
-                        <p className="text-[10px] text-slate-400 font-bold">Chat with Gemini</p>
+                    ))}
+                </div>
+            )}
+
+            {/* Generate Insights Button (if no readings) */}
+            {readings.length === 0 && (
+                <div className="px-4">
+                    <button
+                        onClick={generateReading}
+                        disabled={isLoading}
+                        className="w-full py-6 bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white rounded-[32px] font-black uppercase tracking-wider hover:shadow-lg active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                    >
+                        <ICONS.Sparkles className={`w-6 h-6 ${isLoading ? 'animate-spin' : ''}`} />
+                        {isLoading ? 'Generating AI Insights...' : 'Generate AI Insights'}
                     </button>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

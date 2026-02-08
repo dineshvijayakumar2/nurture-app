@@ -79,7 +79,7 @@ export const Layout = ({
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto pb-32 md:pb-40 px-8 md:px-14 pt-10 relative z-10">
+      <main className="flex-1 overflow-y-auto pb-40 md:pb-48 px-8 md:px-14 pt-6 relative z-10">
         {children}
       </main>
 
