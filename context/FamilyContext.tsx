@@ -238,7 +238,11 @@ export const FamilyProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     const logout = async () => {
         try {
-            await signOut(auth);
+            // If in demo mode, skip Firebase signOut (demo user is not a real Firebase user)
+            if (!isDemoMode) {
+                await signOut(auth);
+            }
+
             // Clear local state
             setUser(null);
             setFamilyId(null);
