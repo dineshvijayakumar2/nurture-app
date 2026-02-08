@@ -17,8 +17,8 @@ const AppContent = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Derived active tab from URL, fallback to 'growth'
-  const activeTab = location.pathname.substring(1) || 'growth';
+  // Derived active tab from URL, fallback to 'home'
+  const activeTab = location.pathname.substring(1) || 'home';
 
   // Get current logged-in parent profile
   const currentParent = parents.find(p => p.id === user?.uid);
@@ -35,10 +35,10 @@ const AppContent = () => {
     <Layout activeTab={activeTab} setActiveTab={(t) => navigate(`/${t}`)} child={child || {} as any} currentParent={currentParent} onProfileClick={() => setIsProfileModalOpen(true)} isProcessing={false}>
       <div className="max-w-4xl mx-auto pt-4">
         <Routes>
-          <Route path="/" element={<Navigate to="/growth" replace />} />
-          <Route path="/growth" element={<Dashboard />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<Dashboard />} />
           <Route path="/journal" element={<Journal />} />
-          <Route path="/calendar" element={<Rhythm />} />
+          <Route path="/activities" element={<Rhythm />} />
           <Route path="/coach" element={<Coach />} />
           <Route path="/wisdom" element={<ValueGarden />} />
         </Routes>

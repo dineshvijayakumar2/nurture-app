@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useFamily } from '../context/FamilyContext';
+import { useNavigate } from 'react-router-dom';
 import { ICONS } from '../constants';
-import { LogCard, InsightCard, NextUpCard, WisdomCard } from '../components/Feed/FeedCards';
+import { NextUpCard } from '../components/Feed/FeedCards';
 import { ScheduledClass } from '../types';
 
 export const Dashboard = () => {
-    const { child, logs, readings, scheduledClasses, knowledge, generateReading, isLoading } = useFamily();
+    const { child, scheduledClasses, generateReading, isLoading } = useFamily();
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const navigate = useNavigate();
 
     // Get calendar data for the month
     const calendarData = useMemo(() => {
@@ -97,22 +99,6 @@ export const Dashboard = () => {
 
     // Get next immediate class
     const nextUp = upcomingClasses[0];
-
-    // Mix Feed Items
-    const feedItems = useMemo(() => {
-        const items: any[] = [];
-
-        // Add latest reading
-        if (readings.length > 0) items.push({ type: 'insight', data: readings[0], date: new Date(readings[0].timestamp) });
-
-        // Add recent logs
-        logs.slice(0, 3).forEach(l => items.push({ type: 'log', data: l, date: new Date(l.timestamp) }));
-
-        // Add some wisdom
-        knowledge.slice(0, 1).forEach(k => items.push({ type: 'wisdom', data: k, date: new Date() }));
-
-        return items.sort((a, b) => b.date.getTime() - a.date.getTime());
-    }, [logs, readings, knowledge]);
 
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -294,27 +280,55 @@ export const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Feed */}
-            <div className="px-4 space-y-8">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-2">Recent Activity</h3>
-                <div className="columns-1 md:columns-2 gap-8 space-y-8">
-                    {feedItems.map((item, idx) => (
-                        <div key={idx} className="break-inside-avoid">
-                            {item.type === 'log' && <LogCard log={item.data} />}
-                            {item.type === 'insight' && <InsightCard reading={item.data} />}
-                            {item.type === 'wisdom' && <WisdomCard resource={item.data} />}
+            {/* Quick Shortcuts */}
+            <div className="px-4 space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-2">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-4">
+                    <button
+                        onClick={() => navigate('/journal')}
+                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
+                    >
+                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <ICONS.Log className="w-7 h-7 text-[#A8C5A8]" />
                         </div>
-                    ))}
+                        <h4 className="font-black text-slate-900 text-sm mb-1">Log Moment</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Record daily observations</p>
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/activities')}
+                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
+                    >
+                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <ICONS.Timeline className="w-7 h-7 text-[#A8C5A8]" />
+                        </div>
+                        <h4 className="font-black text-slate-900 text-sm mb-1">Add Activity</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Schedule new classes</p>
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/wisdom')}
+                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
+                    >
+                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <ICONS.Values className="w-7 h-7 text-[#A8C5A8]" />
+                        </div>
+                        <h4 className="font-black text-slate-900 text-sm mb-1">Research</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Browse knowledge base</p>
+                    </button>
+
+                    <button
+                        onClick={() => navigate('/coach')}
+                        className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95 group"
+                    >
+                        <div className="w-14 h-14 rounded-[20px] bg-[#A8C5A8]/20 flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform">
+                            <ICONS.Sparkles className="w-7 h-7 text-[#A8C5A8]" />
+                        </div>
+                        <h4 className="font-black text-slate-900 text-sm mb-1">AI Coach</h4>
+                        <p className="text-[10px] text-slate-400 font-bold">Chat with Gemini</p>
+                    </button>
                 </div>
             </div>
-
-            {!feedItems.length && !nextUp && upcomingClasses.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-300 gap-4">
-                    <ICONS.Home className="w-12 h-12 opacity-50" />
-                    <p className="font-bold text-sm">Quiet day in the garden...</p>
-                    <p className="text-xs">Start logging moments or add activities to see your dashboard come alive!</p>
-                </div>
-            )}
         </div>
     );
 };

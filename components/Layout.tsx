@@ -22,9 +22,9 @@ export const Layout = ({
   isProcessing = false
 }: LayoutProps) => {
   const navItems = [
-    { id: 'growth', icon: ICONS.Home, label: 'Evolution' },
+    { id: 'home', icon: ICONS.Home, label: 'Home' },
     { id: 'journal', icon: ICONS.Log, label: 'Journal' },
-    { id: 'calendar', icon: ICONS.Timeline, label: 'Rhythm' },
+    { id: 'activities', icon: ICONS.Timeline, label: 'Activities' },
     { id: 'coach', icon: ICONS.Sparkles, label: 'Coach' },
     { id: 'wisdom', icon: ICONS.Values, label: 'Research' },
   ];
