@@ -380,7 +380,7 @@ export const Rhythm = () => {
 
                 {/* Quick Stats - Show for both week and month views */}
                 {stats.classCount > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white rounded-2xl p-4 border border-slate-100">
                             <div className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">
                                 {viewMode === 'week' ? 'This Week' : 'This Month'}
@@ -394,19 +394,6 @@ export const Rhythm = () => {
                             </div>
                             <div className="text-2xl font-black text-slate-900">{stats.totalHours}h</div>
                             <div className="text-xs text-slate-500">scheduled</div>
-                        </div>
-                        <div className="bg-white rounded-2xl p-4 border border-slate-100">
-                            <div className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-1">
-                                Balance
-                            </div>
-                            <div className="flex gap-1 mt-1">
-                                {stats.byCategory.filter(c => c.count > 0).map(cat => (
-                                    <div key={cat.value} className="text-lg" title={`${cat.label}: ${cat.hours}h`}>
-                                        {cat.icon}
-                                    </div>
-                                ))}
-                            </div>
-                            <p className="text-[9px] text-slate-400 mt-1">Category mix</p>
                         </div>
                     </div>
                 )}
