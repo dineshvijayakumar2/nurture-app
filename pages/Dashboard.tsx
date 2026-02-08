@@ -43,9 +43,6 @@ export const Dashboard = () => {
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [quickAddDay, setQuickAddDay] = useState<number | null>(null);
     const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
-    const [showQuickEditTime, setShowQuickEditTime] = useState(false);
-    const [quickEditDay, setQuickEditDay] = useState<number | null>(null);
-    const [quickEditTime, setQuickEditTime] = useState('09:00');
     const [showEditScopeModal, setShowEditScopeModal] = useState(false);
     const [pendingEditAction, setPendingEditAction] = useState<{ class: ScheduledClass; action: 'edit' | 'delete'; dayIndex?: number } | null>(null);
 
@@ -187,13 +184,27 @@ export const Dashboard = () => {
         }
     };
 
-    const handleOpenEdit = (cls: ScheduledClass, dayIndex?: number) => {
-        // For time-only edits (specific day time changes)
-        if (dayIndex !== undefined) {
+    const handleOpenEdit = (cls: ScheduledClass, specificDate?: Date) => {
+        // For editing a specific date occurrence
+        if (specificDate !== undefined) {
             setEditingClass(cls);
-            setQuickEditDay(dayIndex);
-            setQuickEditTime(getTimeForDay(cls, dayIndex));
-            setShowQuickEditTime(true);
+            const dateString = specificDate.toISOString().split('T')[0];
+            const dayTime = getTimeForDay(cls, specificDate.getDay());
+
+            // Create a one-time event for this specific date
+            setFormData({
+                name: cls.name,
+                category: cls.category,
+                day: specificDate.getDay(),
+                selectedDays: [specificDate.getDay()],
+                startTime: dayTime,
+                duration: cls.durationHours,
+                startDate: dateString,
+                endDate: '',
+                isRecurring: false, // This is a one-time override
+                weekOccurrences: [],
+            });
+            setShowQuickAdd(true);
             return;
         }
 
@@ -221,24 +232,6 @@ export const Dashboard = () => {
             weekOccurrences: cls.weekOccurrences || [],
         });
         setShowQuickAdd(true);
-    };
-
-    const handleQuickEditTimeSave = async () => {
-        if (!editingClass || quickEditDay === null) return;
-
-        const updatedDayTimeMap = {
-            ...(editingClass.dayTimeMap || {}),
-            [quickEditDay.toString()]: quickEditTime
-        };
-
-        await updateSchedule({
-            ...editingClass,
-            dayTimeMap: updatedDayTimeMap
-        });
-
-        setShowQuickEditTime(false);
-        setEditingClass(null);
-        setQuickEditDay(null);
     };
 
     const handleDelete = async (cls: ScheduledClass | string) => {
@@ -688,16 +681,16 @@ export const Dashboard = () => {
                                                                 </>
                                                             )}
                                                             <button
-                                                                onClick={() => handleOpenEdit(cls, date.getDay())}
-                                                                className="py-2.5 bg-white rounded-xl text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200"
+                                                                onClick={() => handleOpenEdit(cls, date)}
+                                                                className="py-2.5 bg-blue-50 rounded-xl text-xs font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
                                                             >
-                                                                Edit Time
+                                                                Edit This Date
                                                             </button>
                                                             <button
                                                                 onClick={() => handleOpenEdit(cls)}
-                                                                className="py-2.5 bg-blue-50 rounded-xl text-xs font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
+                                                                className="py-2.5 bg-white rounded-xl text-xs font-black uppercase tracking-wider text-slate-600 hover:bg-slate-200 transition-colors border border-slate-200"
                                                             >
-                                                                Edit
+                                                                Edit Series
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDelete(cls)}
@@ -902,10 +895,16 @@ export const Dashboard = () => {
                                                         )}
                                                         <div className="flex gap-2">
                                                             <button
+                                                                onClick={() => handleOpenEdit(cls, selectedMonthDate)}
+                                                                className="flex-1 py-2 bg-blue-50 rounded-lg text-[9px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100 transition-colors"
+                                                            >
+                                                                Edit This Date
+                                                            </button>
+                                                            <button
                                                                 onClick={() => handleOpenEdit(cls)}
                                                                 className="flex-1 py-2 bg-white rounded-lg text-[9px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-200 transition-colors"
                                                             >
-                                                                Edit
+                                                                Edit Series
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDelete(cls.id)}
@@ -1095,64 +1094,6 @@ export const Dashboard = () => {
                             >
                                 Cancel
                             </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Quick Edit Time Dialog */}
-            {showQuickEditTime && editingClass && quickEditDay !== null && (
-                <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4">
-                    <div
-                        className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
-                        onClick={() => {
-                            setShowQuickEditTime(false);
-                            setEditingClass(null);
-                            setQuickEditDay(null);
-                        }}
-                    />
-
-                    <div className="relative bg-white rounded-t-[32px] md:rounded-[32px] w-full max-w-md shadow-2xl animate-in slide-in-from-bottom md:slide-in-from-bottom-0">
-                        <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-                            <h3 className="text-xl font-black text-slate-900">
-                                Edit Time - {DAYS[quickEditDay]}
-                            </h3>
-                            <p className="text-sm text-slate-500 mt-1">{editingClass.name}</p>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 ml-1 mb-2 block">
-                                    Time for {DAYS[quickEditDay]}
-                                </label>
-                                <input
-                                    type="time"
-                                    value={quickEditTime}
-                                    onChange={(e) => setQuickEditTime(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-transparent focus:border-[#A8C5A8] outline-none font-semibold text-slate-900"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => {
-                                        setShowQuickEditTime(false);
-                                        setEditingClass(null);
-                                        setQuickEditDay(null);
-                                    }}
-                                    className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleQuickEditTimeSave}
-                                    disabled={isLoading}
-                                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#A8C5A8] to-[#8ba78b] text-white font-black uppercase tracking-wider disabled:opacity-50 hover:shadow-lg active:scale-[0.98] transition-all"
-                                >
-                                    Save Time
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
