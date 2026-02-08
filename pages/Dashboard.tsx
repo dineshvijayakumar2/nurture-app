@@ -310,6 +310,9 @@ export const Dashboard = () => {
 
     const getClassesForDate = (date: Date) => {
         const dayIndex = date.getDay();
+        // Normalize date to midnight for comparison (avoid timezone issues)
+        const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
         return scheduledClasses.filter(cls => {
             if (cls.status !== 'active') return false;
 
@@ -318,9 +321,17 @@ export const Dashboard = () => {
                 : cls.dayOfWeek === dayIndex;
 
             if (occursOnDay) {
-                const start = new Date(cls.startDate);
-                const end = cls.endDate ? new Date(cls.endDate) : null;
-                return date >= start && (!end || date <= end);
+                // Parse dates as local dates (not UTC) to avoid timezone offset issues
+                const [startYear, startMonth, startDay] = cls.startDate.split('-').map(Number);
+                const start = new Date(startYear, startMonth - 1, startDay);
+
+                let end = null;
+                if (cls.endDate) {
+                    const [endYear, endMonth, endDay] = cls.endDate.split('-').map(Number);
+                    end = new Date(endYear, endMonth - 1, endDay);
+                }
+
+                return normalizedDate >= start && (!end || normalizedDate <= end);
             }
             return false;
         }).sort((a, b) => {
