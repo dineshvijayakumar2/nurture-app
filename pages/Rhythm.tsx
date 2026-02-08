@@ -26,7 +26,7 @@ const CATEGORIES: { value: ActivityCategory; label: string; icon: string; color:
 
 export const Rhythm = () => {
     const { child, scheduledClasses, activities, addSchedule, updateSchedule, deleteSchedule, addActivity, isLoading, generateReading } = useFamily();
-    const [viewMode, setViewMode] = useState<'week' | 'month' | 'stats'>('week');
+    const [viewMode, setViewMode] = useState<'week' | 'month' | 'stats'>('stats');
     const [expandedClass, setExpandedClass] = useState<string | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingClass, setEditingClass] = useState<ScheduledClass | null>(null);
