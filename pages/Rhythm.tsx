@@ -3,7 +3,7 @@ import { useFamily } from '../context/FamilyContext';
 import { ICONS } from '../constants';
 
 export const Rhythm = () => {
-    const { child, activities } = useFamily();
+    const { child, activities, scheduledClasses } = useFamily();
     const [expandedClass, setExpandedClass] = useState<string | null>(null);
 
     // Calculate attendance statistics
@@ -51,6 +51,100 @@ export const Rhythm = () => {
                             Activity Stats
                         </h1>
                         <p className="text-sm text-slate-500 font-medium">Track attendance and progress</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Scheduled Activities Table */}
+            <div className="space-y-3">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 ml-2">Planned Activities</h3>
+                <div className="bg-white rounded-[24px] border border-slate-100 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-slate-50">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Activity</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Days</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Time</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Duration</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Period</th>
+                                    <th className="px-6 py-4 text-left text-xs font-black uppercase tracking-wider text-slate-500">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {scheduledClasses.filter(cls => cls.status === 'active').map(cls => {
+                                    const iconKey = cls.name.toLowerCase().replace(/\s+/g, '_');
+                                    const hasCustomIcon = child?.activityIcons?.[iconKey];
+                                    const dayNames = cls.daysOfWeek
+                                        ? cls.daysOfWeek.map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')
+                                        : cls.dayOfWeek !== undefined
+                                        ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][cls.dayOfWeek]
+                                        : 'Not set';
+
+                                    return (
+                                        <tr key={cls.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-[#A8C5A8]/10 flex items-center justify-center flex-shrink-0">
+                                                        {hasCustomIcon ? (
+                                                            <img
+                                                                src={child.activityIcons[iconKey]}
+                                                                className="w-6 h-6 object-contain"
+                                                                alt={cls.name}
+                                                                onError={(e) => {
+                                                                    e.currentTarget.style.display = 'none';
+                                                                    e.currentTarget.parentElement!.textContent = '📚';
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            '📚'
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-slate-900">{cls.name}</div>
+                                                        <div className="text-xs text-slate-500 capitalize">{cls.category}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-medium text-slate-700">{dayNames}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-medium text-slate-700">{cls.startTime || '09:00'}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-bold text-[#A8C5A8]">{cls.durationHours}h</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-xs text-slate-600">
+                                                    {new Date(cls.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {cls.endDate && (
+                                                        <> → {new Date(cls.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                                                    )}
+                                                    {!cls.endDate && cls.isRecurring && <> → Ongoing</>}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                                                    cls.isRecurring
+                                                        ? 'bg-blue-50 text-blue-700'
+                                                        : 'bg-purple-50 text-purple-700'
+                                                }`}>
+                                                    {cls.isRecurring ? '🔄 Recurring' : '📅 One-time'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        {scheduledClasses.filter(cls => cls.status === 'active').length === 0 && (
+                            <div className="text-center py-12 text-slate-400">
+                                <div className="text-4xl mb-3">📋</div>
+                                <p className="text-sm font-medium">No planned activities yet</p>
+                                <p className="text-xs mt-2">Add activities from the Home page</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

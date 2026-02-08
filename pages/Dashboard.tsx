@@ -33,7 +33,8 @@ export const Dashboard = () => {
         addSchedule,
         updateSchedule,
         deleteSchedule,
-        addActivity
+        addActivity,
+        activities
     } = useFamily();
 
     const [viewMode, setViewMode] = useState<'week' | 'month'>('month');
@@ -308,6 +309,15 @@ export const Dashboard = () => {
         return cls.startTime || '09:00';
     };
 
+    const getActivityStatus = (className: string, date: Date): 'attended' | 'missed' | null => {
+        const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const loggedActivity = activities.find(act =>
+            act.name === className &&
+            act.timestamp.startsWith(dateString)
+        );
+        return loggedActivity?.status || null;
+    };
+
     const getClassesForDate = (date: Date) => {
         const dayIndex = date.getDay();
         // Normalize date to midnight for comparison (avoid timezone issues)
@@ -561,12 +571,30 @@ export const Dashboard = () => {
                                                 const iconKey = cls.name.toLowerCase().replace(/\s+/g, '_');
                                                 const hasCustomIcon = child?.activityIcons?.[iconKey];
                                                 const dayTime = getTimeForDay(cls, date.getDay());
+                                                const activityStatus = getActivityStatus(cls.name, date);
 
                                                 return (
                                                     <div
                                                         key={cls.id}
-                                                        className="bg-slate-50 rounded-xl p-4 group hover:bg-slate-100 transition-colors"
+                                                        className={`rounded-xl p-4 group hover:bg-slate-100 transition-colors relative ${
+                                                            activityStatus === 'missed'
+                                                                ? 'bg-amber-50 border-2 border-amber-200'
+                                                                : activityStatus === 'attended'
+                                                                ? 'bg-green-50 border-2 border-green-200'
+                                                                : 'bg-slate-50'
+                                                        }`}
                                                     >
+                                                        {activityStatus && (
+                                                            <div className="absolute top-2 right-2">
+                                                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-[8px] font-black uppercase ${
+                                                                    activityStatus === 'missed'
+                                                                        ? 'bg-amber-500 text-white'
+                                                                        : 'bg-green-500 text-white'
+                                                                }`}>
+                                                                    {activityStatus === 'missed' ? '⚠ Missed' : '✓ Done'}
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                         <div className="flex items-start gap-3 mb-3">
                                                             <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-xl border border-slate-100 flex-shrink-0">
                                                                 {hasCustomIcon ? (
@@ -751,12 +779,30 @@ export const Dashboard = () => {
                                             const iconKey = cls.name.toLowerCase().replace(/\s+/g, '_');
                                             const hasCustomIcon = child?.activityIcons?.[iconKey];
                                             const dayTime = getTimeForDay(cls, selectedMonthDate.getDay());
+                                            const activityStatus = getActivityStatus(cls.name, selectedMonthDate);
 
                                             return (
                                                 <div
                                                     key={cls.id}
-                                                    className="bg-slate-50 rounded-xl p-4 group relative hover:bg-slate-100 transition-colors"
+                                                    className={`rounded-xl p-4 group relative hover:bg-slate-100 transition-colors ${
+                                                        activityStatus === 'missed'
+                                                            ? 'bg-amber-50 border-2 border-amber-200'
+                                                            : activityStatus === 'attended'
+                                                            ? 'bg-green-50 border-2 border-green-200'
+                                                            : 'bg-slate-50'
+                                                    }`}
                                                 >
+                                                    {activityStatus && (
+                                                        <div className="absolute top-2 right-2">
+                                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-[8px] font-black uppercase ${
+                                                                activityStatus === 'missed'
+                                                                    ? 'bg-amber-500 text-white'
+                                                                    : 'bg-green-500 text-white'
+                                                            }`}>
+                                                                {activityStatus === 'missed' ? '⚠ Missed' : '✓ Done'}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-start gap-3 mb-2">
                                                         <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-lg border border-slate-100 flex-shrink-0">
                                                             {hasCustomIcon ? (
