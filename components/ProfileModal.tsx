@@ -109,9 +109,9 @@ export const ProfileModal = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 py-24 md:py-28 overflow-hidden">
             <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-xl" onClick={onClose}></div>
-            <div className="bg-white/95 backdrop-blur-3xl w-full max-w-2xl rounded-[56px] p-10 shadow-2xl relative animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh] no-scrollbar">
+            <div className="bg-white/95 backdrop-blur-3xl w-full max-w-2xl rounded-[56px] p-10 shadow-2xl relative animate-in zoom-in duration-500 overflow-y-auto max-h-full no-scrollbar">
                 <div className="flex justify-between items-center mb-10">
                     <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Family Settings</h2>
                     <button onClick={onClose} className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition-colors">
