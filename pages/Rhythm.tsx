@@ -1123,6 +1123,41 @@ export const Rhythm = () => {
                         </div>
 
                         <div className="p-6 md:p-8 space-y-6">
+                            {/* Activity Type Selection */}
+                            <div className="space-y-3">
+                                <label className="block text-xs font-black uppercase tracking-wider text-slate-400 ml-2">
+                                    Activity Type
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, isRecurring: true })}
+                                        className={`p-4 rounded-2xl border-2 transition-all ${
+                                            formData.isRecurring
+                                                ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="text-2xl mb-2">🔄</div>
+                                        <div className="text-sm font-black">Recurring</div>
+                                        <div className="text-[10px] opacity-70 mt-1">Repeats weekly</div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, isRecurring: false })}
+                                        className={`p-4 rounded-2xl border-2 transition-all ${
+                                            !formData.isRecurring
+                                                ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="text-2xl mb-2">📅</div>
+                                        <div className="text-sm font-black">One-time</div>
+                                        <div className="text-[10px] opacity-70 mt-1">Specific date only</div>
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Activity Name */}
                             <div className="space-y-3">
                                 <label className="block text-xs font-black uppercase tracking-wider text-slate-400 ml-2">
@@ -1162,35 +1197,49 @@ export const Rhythm = () => {
                             </div>
 
                             {/* Schedule */}
-                            <div className="space-y-4">
+                            {formData.isRecurring ? (
+                                <div className="space-y-4">
+                                    <div className="space-y-3">
+                                        <label className="block text-xs font-black uppercase tracking-wider text-slate-400 ml-2">
+                                            Days of Week
+                                        </label>
+                                        <div className="grid grid-cols-7 gap-2">
+                                            {DAYS_MON_FIRST.map(day => {
+                                                const isSelected = formData.selectedDays.includes(day.index);
+                                                return (
+                                                    <button
+                                                        key={day.index}
+                                                        type="button"
+                                                        onClick={() => toggleDaySelection(day.index)}
+                                                        className={`w-full py-3 px-2 rounded-xl border-2 transition-all text-center ${
+                                                            isSelected
+                                                                ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white shadow-sm'
+                                                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                                        }`}
+                                                    >
+                                                        <div className="text-[10px] font-black uppercase">{day.short}</div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 ml-2 font-medium">
+                                            Select one or multiple days (same time for all selected days)
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
                                 <div className="space-y-3">
                                     <label className="block text-xs font-black uppercase tracking-wider text-slate-400 ml-2">
-                                        Days of Week
+                                        Activity Date
                                     </label>
-                                    <div className="grid grid-cols-7 gap-2">
-                                        {DAYS_MON_FIRST.map(day => {
-                                            const isSelected = formData.selectedDays.includes(day.index);
-                                            return (
-                                                <button
-                                                    key={day.index}
-                                                    type="button"
-                                                    onClick={() => toggleDaySelection(day.index)}
-                                                    className={`w-full py-3 px-2 rounded-xl border-2 transition-all text-center ${
-                                                        isSelected
-                                                            ? 'border-[#A8C5A8] bg-[#A8C5A8] text-white shadow-sm'
-                                                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                                                    }`}
-                                                >
-                                                    <div className="text-[10px] font-black uppercase">{day.short}</div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 ml-2 font-medium">
-                                        Select one or multiple days (same time for all selected days)
-                                    </p>
+                                    <input
+                                        type="date"
+                                        value={formData.startDate}
+                                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-[#A8C5A8] outline-none font-semibold text-slate-900"
+                                    />
                                 </div>
-                            </div>
+                            )}
 
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="space-y-3">
@@ -1219,30 +1268,34 @@ export const Rhythm = () => {
                                     />
                                 </div>
 
+                                {formData.isRecurring && (
+                                    <div className="space-y-3">
+                                        <label className="block text-xs font-black uppercase tracking-wider text-slate-400 ml-2">
+                                            Starts From
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={formData.startDate}
+                                            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                            className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-[#A8C5A8] outline-none font-semibold text-slate-900"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {formData.isRecurring && (
                                 <div className="space-y-3">
                                     <label className="block text-xs font-black uppercase tracking-wider text-slate-400 ml-2">
-                                        Starts From
+                                        Ends On (optional)
                                     </label>
                                     <input
                                         type="date"
-                                        value={formData.startDate}
-                                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                                        value={formData.endDate}
+                                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                                         className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-[#A8C5A8] outline-none font-semibold text-slate-900"
                                     />
                                 </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                <label className="block text-xs font-black uppercase tracking-wider text-slate-400 ml-2">
-                                    Ends On (optional)
-                                </label>
-                                <input
-                                    type="date"
-                                    value={formData.endDate}
-                                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-[#A8C5A8] outline-none font-semibold text-slate-900"
-                                />
-                            </div>
+                            )}
 
                             {/* Actions */}
                             <div className="flex gap-4 pt-4">
