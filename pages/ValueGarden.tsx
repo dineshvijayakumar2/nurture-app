@@ -83,18 +83,22 @@ export const ValueGarden: React.FC = () => {
                                         <h3 className="text-4xl font-black tracking-tighter mb-2">{valueDialogue.value}</h3>
                                         <p className="text-slate-400 italic text-lg font-serif">{valueDialogue.philosophicalRoot}</p>
                                     </div>
-                                    <div className="space-y-6">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A8C5A8]">Conversation Starters</h4>
-                                        {valueDialogue.conversationStarters.map((s, i) => (
-                                            <div key={i} className="bg-white/10 border border-white/10 p-6 rounded-[32px] text-lg font-medium leading-relaxed hover:bg-white/20 transition-colors">"{s}"</div>
-                                        ))}
-                                    </div>
-                                    <div className="space-y-6">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A8C5A8]">Teaching Moment</h4>
-                                        {valueDialogue.teachingMoments.map((s, i) => (
-                                            <div key={i} className="text-slate-300 leading-relaxed text-sm">{s}</div>
-                                        ))}
-                                    </div>
+                                    {valueDialogue.conversationStarters && valueDialogue.conversationStarters.length > 0 && (
+                                        <div className="space-y-6">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A8C5A8]">Conversation Starters</h4>
+                                            {valueDialogue.conversationStarters.map((s, i) => (
+                                                <div key={i} className="bg-white/10 border border-white/10 p-6 rounded-[32px] text-lg font-medium leading-relaxed hover:bg-white/20 transition-colors">"{s}"</div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {valueDialogue.teachingMoments && valueDialogue.teachingMoments.length > 0 && (
+                                        <div className="space-y-6">
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#A8C5A8]">Teaching Moment</h4>
+                                            {valueDialogue.teachingMoments.map((s, i) => (
+                                                <div key={i} className="text-slate-300 leading-relaxed text-sm">{s}</div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
